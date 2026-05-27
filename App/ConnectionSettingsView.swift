@@ -15,7 +15,7 @@ struct ConnectionSettingsView: View {
       VStack(alignment: .leading, spacing: 8) {
         RequirementRow(text: "Board API compatible token")
         RequirementRow(text: "No engine assistance or move suggestions")
-        RequirementRow(text: "Rapid, Classical, and Correspondence seeks by default")
+        RequirementRow(text: "Rapid seeks only")
       }
 
       Button("Check Stream", systemImage: "antenna.radiowaves.left.and.right") {

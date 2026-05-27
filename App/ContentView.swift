@@ -2,40 +2,21 @@ import SwiftUI
 
 struct ContentView: View {
   @State private var model = LichessClientModel()
-  @State private var section = ClientSection.board
+  @State private var showingSettings = false
 
   var body: some View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 18) {
-          HeaderPanel(model: model)
-
-          Picker("Section", selection: $section) {
-            ForEach(ClientSection.allCases) { section in
-              Label(section.title, systemImage: section.systemImage)
-                .tag(section)
-            }
-          }
-          .pickerStyle(.segmented)
-
-          Group {
-            switch section {
-            case .board:
-              LiveBoardView(model: model)
-            case .play:
-              PairingView(model: model)
-            case .challenges:
-              ChallengesView(model: model)
-            case .settings:
-              ConnectionSettingsView(model: model)
-            }
-          }
+          RapidHeaderView(model: model)
+          RapidPairingStrip(model: model)
+          LiveBoardView(model: model)
         }
         .frame(maxWidth: .infinity)
         .padding()
       }
       .background(Color(.systemGroupedBackground))
-      .navigationTitle("Lichess Board")
+      .navigationTitle("Rapid")
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
           Button("Refresh", systemImage: "arrow.clockwise") {
@@ -43,6 +24,27 @@ struct ContentView: View {
           }
           .labelStyle(.iconOnly)
           .accessibilityLabel("Refresh stream")
+
+          Button("Token", systemImage: "key") {
+            showingSettings = true
+          }
+          .labelStyle(.iconOnly)
+          .accessibilityLabel("Token settings")
+        }
+      }
+      .sheet(isPresented: $showingSettings) {
+        NavigationStack {
+          ConnectionSettingsView(model: model)
+            .padding()
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Lichess Token")
+            .toolbar {
+              ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") {
+                  showingSettings = false
+                }
+              }
+            }
         }
       }
     }

@@ -1,27 +1,21 @@
 import Foundation
 
 enum ClientSection: String, CaseIterable, Identifiable {
-  case board
-  case play
-  case challenges
+  case game
   case settings
 
   var id: String { rawValue }
 
   var title: String {
     switch self {
-    case .board: "Board"
-    case .play: "Play"
-    case .challenges: "Inbox"
+    case .game: "Game"
     case .settings: "Token"
     }
   }
 
   var systemImage: String {
     switch self {
-    case .board: "checkerboard.rectangle"
-    case .play: "scope"
-    case .challenges: "tray"
+    case .game: "checkerboard.rectangle"
     case .settings: "key"
     }
   }
@@ -169,8 +163,8 @@ struct SeekPreset: Identifiable {
   static var defaults: [SeekPreset] {
     [
       SeekPreset(title: "Rapid 10+5", time: 10, increment: 5, days: nil, rated: false, color: .random),
-      SeekPreset(title: "Classical 30+20", time: 30, increment: 20, days: nil, rated: true, color: .random),
-      SeekPreset(title: "Correspondence 3 days", time: nil, increment: nil, days: 3, rated: false, color: .random)
+      SeekPreset(title: "Rapid 15+10", time: 15, increment: 10, days: nil, rated: false, color: .random),
+      SeekPreset(title: "Rapid 25+10", time: 25, increment: 10, days: nil, rated: true, color: .random)
     ]
   }
 }

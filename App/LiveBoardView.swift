@@ -4,7 +4,7 @@ struct LiveBoardView: View {
   @Bindable var model: LichessClientModel
 
   var body: some View {
-    VStack(spacing: 14) {
+    VStack(spacing: 12) {
       GameClockRow(game: model.activeGame)
       ChessBoardView(model: model)
       MoveControlsView(model: model)
@@ -146,13 +146,6 @@ private struct ChatComposerView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Picker("Room", selection: $model.selectedRoom) {
-        ForEach(ChatRoom.allCases) { room in
-          Text(room.title).tag(room)
-        }
-      }
-      .pickerStyle(.segmented)
-
       HStack(spacing: 8) {
         TextField("Message", text: $model.draftMessage)
           .textFieldStyle(.roundedBorder)
@@ -165,7 +158,7 @@ private struct ChatComposerView: View {
         .accessibilityLabel("Send chat")
       }
 
-      ForEach(model.activeGame.chat) { line in
+      ForEach(model.activeGame.chat.prefix(2)) { line in
         HStack {
           Text(line.user)
             .font(.caption.weight(.semibold))
@@ -186,10 +179,7 @@ private struct EventFeedView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text("Events")
-        .font(.headline)
-
-      ForEach(events.prefix(5)) { event in
+      ForEach(events.prefix(3)) { event in
         Label {
           VStack(alignment: .leading, spacing: 2) {
             Text(event.title)

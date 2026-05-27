@@ -1,6 +1,6 @@
 # Lichess Board
 
-Lichess Board is a native iOS client for playing Lichess games through the Board API. It is designed for normal Lichess accounts and must not provide engine analysis, hints, evaluations, opening assistance, or any other outside help during games.
+Lichess Board is a minimal native iOS client for playing rapid Lichess games through the Board API. It is designed for normal Lichess accounts and must not provide engine analysis, hints, evaluations, opening assistance, or any other outside help during games.
 
 ## Current App Slice
 
@@ -8,8 +8,8 @@ The app currently includes:
 
 - A SwiftUI dashboard for stream status and the active game.
 - A tappable board UI that stages UCI moves.
-- Seek presets for Rapid, Classical, and Correspondence games.
-- Challenge inbox actions for accept and decline flows.
+- Rapid-only seek presets.
+- A reduced single-screen play flow with token setup in a sheet.
 - Player and spectator chat UI.
 - Token entry screen for future authenticated API calls.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
@@ -55,7 +55,7 @@ Recommended next architectural additions:
 ## Implementation Milestones
 
 1. Store the user API token securely in Keychain.
-2. Connect `GET /api/stream/event` and show incoming games and challenges.
+2. Connect `GET /api/stream/event` and show incoming rapid games and challenges.
 3. Connect `GET /api/board/game/stream/{gameId}` and reconcile `gameFull` plus `gameState`.
 4. Replace the static board pieces with a FEN/move-derived board model.
 5. Validate taps into legal local UCI move candidates without suggesting moves.
@@ -81,10 +81,7 @@ Post-game review can be considered later only if it is clearly separated from ac
 
 - Launches on iPhone without layout clipping.
 - Token field accepts and hides input.
-- Section picker switches between Board, Play, Inbox, and Token.
 - Board taps stage a UCI move in the event feed.
-- Seek preset buttons add seek events.
-- Challenge accept and decline buttons update challenge status.
+- Rapid seek preset buttons add seek events.
 - Chat composer adds messages to the selected room.
 - Abort and resign buttons update the event feed.
-
