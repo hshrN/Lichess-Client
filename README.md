@@ -7,7 +7,7 @@ Lichess Board is a minimal native iOS client for playing rapid Lichess games thr
 The app currently includes:
 
 - A richer iOS dashboard with play controls, following challenges, challenge inbox, activity, and Lichess account status.
-- A tappable board UI that stages UCI moves.
+- A live board UI backed by ChessKit and updated from Lichess game streams.
 - Rapid-only seek presets that map to Lichess Board API seeks.
 - Following list and direct challenge UI for players the user follows.
 - Bot play panel for challenging online bot accounts.
@@ -19,8 +19,16 @@ The app currently includes:
 - `THIRD_PARTY_NOTICES.md` for dependency license tracking.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
 
-Most UI actions currently update local preview state. Live networking is intentionally isolated behind the API layer so authentication, streaming, and state reconciliation can be added cleanly.
-The seek flow, online bot list refresh, and direct challenge actions now make live Lichess requests. Board game streaming and full state reconciliation are still incomplete.
+The app now has a mixed state:
+
+- Live OAuth sign-in and token revocation
+- Live event stream
+- Live public seek requests
+- Live direct challenges to followed players and online bot accounts
+- Live online bot list refresh
+- Live per-game board stream with clock, status, chat-line, and move-list updates
+
+Some flows are still incomplete, especially action endpoints from inside a live game and robust reconnect handling.
 
 ## Authentication
 
@@ -92,6 +100,7 @@ Primary endpoints planned for the app:
 - `GET /api/bot/online`
 
 The global event stream should be opened before creating real-time seeks so the app does not miss a fast game-start event.
+The app now opens the event stream and transitions into a game screen on `gameStart`, then opens the per-game stream and rebuilds the board from `initialFen` plus UCI move history.
 
 ## Chess Library Research
 
@@ -136,9 +145,9 @@ Recommended path:
 
 The current implementation is split into:
 
-- `LichessClientModel`: app state, local action handlers, and preview stream behavior.
+- `LichessClientModel`: app state, OAuth session handling, live Lichess networking, and stream reconciliation.
 - `LichessModels`: strongly typed app models and enums.
-- `LichessBoardAPI`: authenticated URL request construction for Board API calls.
+- `LichessBoardAPI`: authenticated URL request construction for Board API calls and challenge flows.
 - Challenge/following request builders for `GET /api/rel/following`, `GET /api/challenge`, direct challenge creation, accept, and decline.
 - Bot-play request builders for `GET /api/bot/online` and direct bot challenges through `POST /api/challenge/{username}`.
 - SwiftUI screen files for the board, pairing, challenges, settings, and header.
@@ -146,24 +155,18 @@ The current implementation is split into:
 Recommended next architectural additions:
 
 - `LichessAuthStore`: Keychain-backed OAuth session storage.
-- `NDJSONStreamClient`: consume Lichess newline-delimited JSON streams using `URLSession`.
-- `LichessEventDecoder`: decode `gameStart`, `gameFinish`, challenge, `gameFull`, `gameState`, `chatLine`, and `opponentGone` events.
-- `GameStateReducer`: merge stream events into local board, clock, chat, and action state.
+- A dedicated stream client abstraction to separate `URLSession.AsyncBytes` handling from UI state.
+- Stronger event decoding for the full Lichess event surface, including validation and error reporting.
+- A separate game-state reducer to keep stream parsing and UI state mutation isolated.
 - `ChessPosition`: derive board position from `initialFen` plus UCI move list.
 
 ## Implementation Milestones
 
-1. Connect `GET /api/stream/event` and show incoming rapid games and challenges.
-2. Connect `GET /api/board/game/stream/{gameId}` and reconcile `gameFull` plus `gameState`.
-3. Replace the static board pieces with a FEN/move-derived board model.
-4. Validate taps into legal local UCI move candidates without suggesting moves.
-5. Submit moves through `POST /api/board/game/{gameId}/move/{move}`.
-6. Parse `GET /api/rel/following` NDJSON into the challenge list.
-7. Wire direct challenges with `POST /api/challenge/{username}`.
-8. Wire bot play through online bot listings and direct challenges.
-9. Wire chat, resign, abort, draw, takeback, and claim actions.
-10. Add resilient stream reconnect behavior and clear user-facing error states.
-11. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
+1. Submit moves through `POST /api/board/game/{gameId}/move/{move}`.
+2. Wire chat sending and game actions: resign, abort, draw, takeback, and claim flows.
+3. Improve event/game stream reconnect behavior and cancellation semantics.
+4. Replace the remaining ad hoc JSON parsing with stronger typed decoding.
+5. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
 
 ## Fair Play Requirements
 
@@ -182,10 +185,12 @@ Post-game review can be considered later only if it is clearly separated from ac
 
 - Launches on iPhone without layout clipping.
 - Lichess sign-in opens OAuth and returns to the app.
+- Signing in starts the event stream without manual token entry.
 - Appearance picker switches between System, Light, and Dark.
 - Home screen starts with Play, not a chessboard.
-- Board taps stage a UCI move after entering a game.
-- Rapid seek preset buttons add seek events.
-- Following refresh and challenge buttons add challenge events.
+- Rapid seek preset buttons create real seek requests and can be canceled.
+- Bot/following challenge buttons create real challenge requests.
+- A `gameStart` event opens the game screen.
+- `gameFull` and `gameState` update the board, clocks, and status.
 - Chat composer adds messages to the selected room.
 - Abort and resign buttons update the event feed.

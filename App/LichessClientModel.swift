@@ -24,6 +24,7 @@ final class LichessClientModel {
   var board = Board()
   private var eventStreamTask: Task<Void, Never>?
   private var seekTask: Task<Void, Never>?
+  private var gameStreamTask: Task<Void, Never>?
 
   init() {
     if let session = LichessAuthStore.loadSession() {
@@ -91,6 +92,8 @@ final class LichessClientModel {
     seekTask = nil
     eventStreamTask?.cancel()
     eventStreamTask = nil
+    gameStreamTask?.cancel()
+    gameStreamTask = nil
     streamState = .disconnected
     isSearching = false
     events.insert(
@@ -473,6 +476,7 @@ final class LichessClientModel {
         chat: []
       )
       isInGame = true
+      startGameStream(gameID: event.game.gameId)
       events.insert(
         LichessEvent(title: "Game started", detail: "\(event.game.opponent.username) • \(event.game.speed.capitalized)", systemImage: "play.circle"),
         at: 0
@@ -579,6 +583,142 @@ final class LichessClientModel {
     let remainder = seconds % 60
     return String(format: "%02d:%02d", minutes, remainder)
   }
+
+  private func startGameStream(gameID: String) {
+    gameStreamTask?.cancel()
+    let request = api.gameStreamRequest(gameId: gameID)
+    gameStreamTask = Task { [weak self] in
+      guard let self else { return }
+      do {
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+          await self.recordEvent(title: "Game stream failed", detail: "Lichess rejected the game stream.", icon: "exclamationmark.triangle")
+          return
+        }
+
+        for try await line in bytes.lines {
+          guard !Task.isCancelled else { return }
+          guard let data = line.data(using: .utf8), !line.isEmpty else { continue }
+          await self.handleGameStreamLine(data)
+        }
+      } catch is CancellationError {
+        return
+      } catch {
+        await self.recordEvent(title: "Game stream disconnected", detail: error.localizedDescription, icon: "exclamationmark.triangle")
+      }
+    }
+  }
+
+  private func handleGameStreamLine(_ data: Data) {
+    guard let envelope = try? JSONDecoder().decode(EventEnvelope.self, from: data) else { return }
+
+    switch envelope.type {
+    case "gameFull":
+      guard let event = try? JSONDecoder().decode(GameFullEvent.self, from: data) else { return }
+      let myColor = activeGame.myColor.lowercased() == "white" ? "white" : "black"
+      let meIsWhite = myColor == "white"
+      let opponentPlayer = meIsWhite ? event.black : event.white
+
+      activeGame.id = event.id
+      activeGame.opponent = opponentPlayer.name
+      activeGame.opponentRating = opponentPlayer.rating ?? activeGame.opponentRating
+      activeGame.speed = gameSpeedLabel(speed: event.speed, clock: event.clock, daysPerTurn: event.daysPerTurn)
+      activeGame.status = event.state.status
+      updateBoardState(initialFEN: event.initialFen, movesString: event.state.moves)
+      updateClockState(
+        state: event.state,
+        meIsWhite: meIsWhite,
+        fallbackInitial: event.clock?.initial ?? 0
+      )
+    case "gameState":
+      guard let event = try? JSONDecoder().decode(GameStateEvent.self, from: data) else { return }
+      let meIsWhite = activeGame.myColor.lowercased() == "white"
+      activeGame.status = event.status
+      updateBoardState(initialFEN: nil, movesString: event.moves)
+      updateClockState(state: event, meIsWhite: meIsWhite, fallbackInitial: 0)
+    case "chatLine":
+      guard let line = try? JSONDecoder().decode(ChatLineEvent.self, from: data) else { return }
+      let room = line.room == "spectator" ? ChatRoom.spectator : .player
+      activeGame.chat.insert(ChatLine(user: line.username, text: line.text, room: room), at: 0)
+    case "opponentGone":
+      guard let event = try? JSONDecoder().decode(OpponentGoneEvent.self, from: data) else { return }
+      let detail = event.gone ? "Opponent left the game." : "Opponent returned."
+      events.insert(
+        LichessEvent(title: "Presence update", detail: detail, systemImage: "person.crop.circle.badge.exclamationmark"),
+        at: 0
+      )
+    default:
+      break
+    }
+  }
+
+  private func updateBoardState(initialFEN: String?, movesString: String) {
+    let startingPosition: Position
+    if let initialFEN, initialFEN != "startpos", let position = Position(fen: initialFEN) {
+      startingPosition = position
+    } else {
+      startingPosition = .standard
+    }
+
+    var liveBoard = Board(position: startingPosition)
+    let moves = movesString.split(separator: " ").map(String.init)
+    for move in moves {
+      apply(uciMove: move, to: &liveBoard)
+    }
+
+    board = liveBoard
+    activeGame.moves = moves
+    activeGame.lastMove = moves.last ?? ""
+    activeGame.isMyTurn = board.position.sideToMove == (activeGame.myColor.lowercased() == "white" ? .white : .black)
+  }
+
+  private func apply(uciMove: String, to board: inout Board) {
+    guard uciMove.count >= 4 else { return }
+    let start = String(uciMove.prefix(2))
+    let end = String(uciMove.dropFirst(2).prefix(2))
+    let move = board.move(pieceAt: Square(start), to: Square(end))
+    guard
+      uciMove.count == 5,
+      let move,
+      case .promotion = board.state
+    else {
+      return
+    }
+
+    let promotionCode = uciMove.suffix(1)
+    let kind: Piece.Kind
+    switch promotionCode {
+    case "q": kind = .queen
+    case "r": kind = .rook
+    case "b": kind = .bishop
+    case "n": kind = .knight
+    default: kind = .queen
+    }
+    board.completePromotion(of: move, to: kind)
+  }
+
+  private func updateClockState(state: GameStateEvent, meIsWhite: Bool, fallbackInitial: Int) {
+    let whiteMillis = state.wtime ?? fallbackInitial
+    let blackMillis = state.btime ?? fallbackInitial
+    activeGame.whiteTime = formatMilliseconds(whiteMillis)
+    activeGame.blackTime = formatMilliseconds(blackMillis)
+    activeGame.isMyTurn = board.position.sideToMove == (meIsWhite ? .white : .black)
+  }
+
+  private func gameSpeedLabel(speed: String, clock: GameClock?, daysPerTurn: Int?) -> String {
+    if let daysPerTurn {
+      return "Correspondence \(daysPerTurn)d"
+    }
+    if let clock {
+      let minutes = clock.initial / 60000
+      return "\(speed.capitalized) \(minutes)+\(clock.increment)"
+    }
+    return speed.capitalized
+  }
+
+  private func formatMilliseconds(_ milliseconds: Int) -> String {
+    formatSeconds(max(milliseconds / 1000, 0))
+  }
 }
 
 private struct EventEnvelope: Decodable {
@@ -598,6 +738,51 @@ private struct StartedGame: Decodable {
   var opponent: Opponent
   var isMyTurn: Bool
   var secondsLeft: Int
+}
+
+private struct GameFullEvent: Decodable {
+  var id: String
+  var initialFen: String
+  var speed: String
+  var white: GamePlayer
+  var black: GamePlayer
+  var clock: GameClock?
+  var daysPerTurn: Int?
+  var state: GameStateEvent
+}
+
+private struct GamePlayer: Decodable {
+  var name: String
+  var rating: Int?
+}
+
+private struct GameClock: Decodable {
+  var initial: Int
+  var increment: Int
+}
+
+private struct GameStateEvent: Decodable {
+  var type: String?
+  var moves: String
+  var wtime: Int?
+  var btime: Int?
+  var status: String
+}
+
+private struct ChatLineEvent: Decodable {
+  var username: String
+  var text: String
+  var room: String
+
+  enum CodingKeys: String, CodingKey {
+    case username = "username"
+    case text
+    case room
+  }
+}
+
+private struct OpponentGoneEvent: Decodable {
+  var gone: Bool
 }
 
 private struct Status: Decodable {
