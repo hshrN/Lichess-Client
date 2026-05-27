@@ -23,7 +23,9 @@ struct FollowingChallengeView: View {
         Spacer()
         Button("Following", systemImage: "arrow.clockwise") {
           if model.isConfigured {
-            model.refreshFollowing()
+            Task {
+              await model.refreshFollowing()
+            }
           } else {
             showSettings()
           }
@@ -59,7 +61,9 @@ struct FollowingChallengeView: View {
 
           Button("10+5", systemImage: "paperplane.fill") {
             if model.isConfigured {
-              model.challenge(player)
+              Task {
+                await model.challenge(player)
+              }
             } else {
               showSettings()
             }

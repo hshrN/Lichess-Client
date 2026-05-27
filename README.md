@@ -20,6 +20,7 @@ The app currently includes:
 - A `LichessBoardAPI` request builder for core Board API endpoints.
 
 Most UI actions currently update local preview state. Live networking is intentionally isolated behind the API layer so authentication, streaming, and state reconciliation can be added cleanly.
+The seek flow, online bot list refresh, and direct challenge actions now make live Lichess requests. Board game streaming and full state reconciliation are still incomplete.
 
 ## Authentication
 

@@ -107,7 +107,9 @@ private struct PlayControlPanel: View {
 
       Button {
         if model.isConfigured {
-          model.seek(model.selectedSeekPreset)
+          Task {
+            await model.seek(model.selectedSeekPreset)
+          }
         } else {
           showSettings()
         }
@@ -123,12 +125,12 @@ private struct PlayControlPanel: View {
       if model.isSearching {
         HStack(spacing: 12) {
           ProgressView()
-          Text("Waiting for Lichess to pair a rapid game.")
+          Text("Searching on Lichess for \(model.selectedSeekPreset.title).")
             .font(.subheadline)
             .foregroundStyle(.secondary)
           Spacer()
-          Button("Preview") {
-            model.openPreviewGame()
+          Button("Cancel") {
+            model.cancelSeek()
           }
           .font(.subheadline.weight(.semibold))
         }
@@ -188,7 +190,9 @@ private struct BotPlayPanel: View {
         Spacer()
         Button("Refresh", systemImage: "arrow.clockwise") {
           if model.isConfigured {
-            model.refreshOnlineBots()
+            Task {
+              await model.refreshOnlineBots()
+            }
           } else {
             showSettings()
           }
@@ -223,7 +227,9 @@ private struct BotPlayPanel: View {
 
             Button("Challenge", systemImage: "paperplane.fill") {
               if model.isConfigured {
-                model.challengeBot(bot)
+                Task {
+                  await model.challengeBot(bot)
+                }
               } else {
                 showSettings()
               }

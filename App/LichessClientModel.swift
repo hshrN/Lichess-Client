@@ -22,12 +22,15 @@ final class LichessClientModel {
   var draftMessage = ""
   var selectedSquare: BoardSquare?
   var board = Board()
+  private var eventStreamTask: Task<Void, Never>?
+  private var seekTask: Task<Void, Never>?
 
   init() {
     if let session = LichessAuthStore.loadSession() {
       accessToken = session.accessToken
       accountUsername = session.username
       streamState = .connected
+      startEventStreamIfNeeded()
     }
   }
 
@@ -57,6 +60,7 @@ final class LichessClientModel {
         LichessEvent(title: "Signed in", detail: session.username, systemImage: "person.crop.circle.badge.checkmark"),
         at: 0
       )
+      startEventStreamIfNeeded()
     } catch {
       authError = error.localizedDescription
       events.insert(
@@ -83,6 +87,10 @@ final class LichessClientModel {
     accessToken = ""
     accountUsername = ""
     LichessAuthStore.clearSession()
+    seekTask?.cancel()
+    seekTask = nil
+    eventStreamTask?.cancel()
+    eventStreamTask = nil
     streamState = .disconnected
     isSearching = false
     events.insert(
@@ -92,27 +100,35 @@ final class LichessClientModel {
   }
 
   func refreshMockStream() {
-    streamState = isConfigured ? .connected : .preview
+    guard isConfigured else {
+      streamState = .preview
+      return
+    }
+
+    startEventStreamIfNeeded(forceRestart: true)
     events.insert(
       LichessEvent(
         title: "Stream ready",
-        detail: isConfigured ? "Event and game streams can be opened." : "Add an API token to connect.",
-        systemImage: isConfigured ? "antenna.radiowaves.left.and.right" : "eye"
+        detail: "Event and game streams can be opened.",
+        systemImage: "antenna.radiowaves.left.and.right"
       ),
       at: 0
     )
   }
 
-  func seek(_ preset: SeekPreset) {
+  func seek(_ preset: SeekPreset) async {
     guard isConfigured else {
       streamState = .disconnected
       events.insert(
-        LichessEvent(title: "Token required", detail: "Add a Lichess API token before searching.", systemImage: "key")
-        , at: 0
+        LichessEvent(title: "Sign-in required", detail: "Sign in with Lichess before searching.", systemImage: "person.crop.circle"),
+        at: 0
       )
       return
     }
 
+    selectedSeekPreset = preset
+    seekTask?.cancel()
+    startEventStreamIfNeeded()
     isSearching = true
     streamState = .connected
     events.insert(
@@ -123,93 +139,150 @@ final class LichessClientModel {
       ),
       at: 0
     )
+
+    let request = api.seekRequest(preset: preset)
+    seekTask = Task { [weak self] in
+      guard let self else { return }
+      do {
+        let (_, response) = try await URLSession.shared.bytes(for: request)
+        guard let http = response as? HTTPURLResponse else { return }
+        if !(200..<300).contains(http.statusCode) {
+          await self.handleSeekFailure(message: "Seek failed with status \(http.statusCode).")
+          return
+        }
+
+        while !Task.isCancelled {
+          try await Task.sleep(for: .seconds(1))
+        }
+      } catch is CancellationError {
+        return
+      } catch {
+        await self.handleSeekFailure(message: error.localizedDescription)
+      }
+    }
   }
 
-  func refreshFollowing() {
+  func cancelSeek() {
+    seekTask?.cancel()
+    seekTask = nil
+    isSearching = false
+    events.insert(
+      LichessEvent(title: "Seek canceled", detail: selectedSeekPreset.title, systemImage: "xmark.circle"),
+      at: 0
+    )
+  }
+
+  func refreshFollowing() async {
     guard isConfigured else {
       events.insert(
-        LichessEvent(title: "Token required", detail: "Add a token to load following.", systemImage: "key"),
+        LichessEvent(title: "Sign-in required", detail: "Sign in with Lichess to load following.", systemImage: "person.crop.circle"),
         at: 0
       )
       return
     }
 
-    events.insert(
-      LichessEvent(title: "Following refresh queued", detail: "/api/rel/following", systemImage: "person.2"),
-      at: 0
-    )
+    do {
+      let (bytes, response) = try await URLSession.shared.bytes(for: api.followingRequest())
+      guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        events.insert(
+          LichessEvent(title: "Following refresh failed", detail: "Lichess rejected the request.", systemImage: "exclamationmark.triangle"),
+          at: 0
+        )
+        return
+      }
+
+      var loadedPlayers: [LichessFollowedPlayer] = []
+      for try await line in bytes.lines {
+        guard let data = line.data(using: .utf8), !line.isEmpty else { continue }
+        if let player = try? parseFollowedPlayer(from: data) {
+          loadedPlayers.append(player)
+        }
+      }
+
+      if !loadedPlayers.isEmpty {
+        following = loadedPlayers
+      }
+      events.insert(
+        LichessEvent(title: "Following updated", detail: "\(following.count) players", systemImage: "person.2"),
+        at: 0
+      )
+    } catch {
+      events.insert(
+        LichessEvent(title: "Following refresh failed", detail: error.localizedDescription, systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+    }
   }
 
   func selectSeekPreset(_ preset: SeekPreset) {
     selectedSeekPreset = preset
   }
 
-  func challenge(_ player: LichessFollowedPlayer, preset: SeekPreset = SeekPreset.defaults[0]) {
+  func challenge(_ player: LichessFollowedPlayer, preset: SeekPreset = SeekPreset.defaults[0]) async {
     guard isConfigured else {
       events.insert(
-        LichessEvent(title: "Token required", detail: "Add a token before challenging \(player.username).", systemImage: "key"),
+        LichessEvent(title: "Sign-in required", detail: "Sign in with Lichess before challenging \(player.username).", systemImage: "person.crop.circle"),
         at: 0
       )
       return
     }
 
-    challenges.insert(
-      LichessChallenge(
-        id: UUID().uuidString,
-        opponent: player.username,
-        rating: player.rapidRating ?? 1500,
-        control: preset.title,
-        rated: preset.rated,
-        status: .pending
-      ),
-      at: 0
-    )
-    events.insert(
-      LichessEvent(title: "Challenge queued", detail: "\(player.username), \(preset.title)", systemImage: "paperplane"),
-      at: 0
-    )
+    await sendChallenge(username: player.username, rating: player.rapidRating ?? 1500, preset: preset, icon: "paperplane")
   }
 
-  func refreshOnlineBots() {
+  func refreshOnlineBots() async {
     guard isConfigured else {
       events.insert(
-        LichessEvent(title: "Token required", detail: "Add a token to load online bots.", systemImage: "key"),
+        LichessEvent(title: "Sign-in required", detail: "Sign in with Lichess to load online bots.", systemImage: "person.crop.circle"),
         at: 0
       )
       return
     }
 
-    events.insert(
-      LichessEvent(title: "Bot list refresh queued", detail: "/api/bot/online", systemImage: "cpu"),
-      at: 0
-    )
+    do {
+      let (bytes, response) = try await URLSession.shared.bytes(for: api.onlineBotsRequest())
+      guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        events.insert(
+          LichessEvent(title: "Bot list refresh failed", detail: "Lichess rejected the request.", systemImage: "exclamationmark.triangle"),
+          at: 0
+        )
+        return
+      }
+
+      var loadedBots: [LichessBotPlayer] = []
+      for try await line in bytes.lines {
+        guard let data = line.data(using: .utf8), !line.isEmpty else { continue }
+        if let bot = try? parseBotPlayer(from: data) {
+          loadedBots.append(bot)
+        }
+      }
+
+      if !loadedBots.isEmpty {
+        onlineBots = loadedBots
+      }
+      events.insert(
+        LichessEvent(title: "Online bots updated", detail: "\(onlineBots.count) bots", systemImage: "cpu"),
+        at: 0
+      )
+    } catch {
+      events.insert(
+        LichessEvent(title: "Bot list refresh failed", detail: error.localizedDescription, systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+    }
   }
 
-  func challengeBot(_ bot: LichessBotPlayer, preset: SeekPreset? = nil) {
+  func challengeBot(_ bot: LichessBotPlayer, preset: SeekPreset? = nil) async {
     guard isConfigured else {
       events.insert(
-        LichessEvent(title: "Token required", detail: "Add a token before challenging \(bot.username).", systemImage: "key"),
+        LichessEvent(title: "Sign-in required", detail: "Sign in with Lichess before challenging \(bot.username).", systemImage: "person.crop.circle"),
         at: 0
       )
       return
     }
 
     let chosenPreset = preset ?? selectedSeekPreset
-    challenges.insert(
-      LichessChallenge(
-        id: UUID().uuidString,
-        opponent: bot.username,
-        rating: bot.rating ?? 1500,
-        control: chosenPreset.title,
-        rated: chosenPreset.rated,
-        status: .pending
-      ),
-      at: 0
-    )
-    events.insert(
-      LichessEvent(title: "Bot challenge queued", detail: "\(bot.username), \(chosenPreset.title)", systemImage: "cpu"),
-      at: 0
-    )
+    await sendChallenge(username: bot.username, rating: bot.rating ?? 1500, preset: chosenPreset, icon: "cpu")
   }
 
   func openPreviewGame() {
@@ -340,4 +413,227 @@ final class LichessClientModel {
 
     challenges[index].status = status
   }
+
+  private var api: LichessBoardAPI {
+    LichessBoardAPI(accessToken: accessToken)
+  }
+
+  private func startEventStreamIfNeeded(forceRestart: Bool = false) {
+    guard isConfigured else { return }
+    if forceRestart {
+      eventStreamTask?.cancel()
+      eventStreamTask = nil
+    }
+    guard eventStreamTask == nil else { return }
+
+    let request = api.eventStreamRequest()
+    eventStreamTask = Task { [weak self] in
+      guard let self else { return }
+      do {
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+          await self.recordEvent(title: "Event stream failed", detail: "Lichess rejected the event stream.", icon: "exclamationmark.triangle")
+          return
+        }
+
+        for try await line in bytes.lines {
+          guard !Task.isCancelled else { return }
+          guard let data = line.data(using: .utf8), !line.isEmpty else { continue }
+          await self.handleEventStreamLine(data)
+        }
+      } catch is CancellationError {
+        return
+      } catch {
+        await self.recordEvent(title: "Event stream disconnected", detail: error.localizedDescription, icon: "exclamationmark.triangle")
+      }
+    }
+  }
+
+  private func handleEventStreamLine(_ data: Data) {
+    guard let envelope = try? JSONDecoder().decode(EventEnvelope.self, from: data) else { return }
+    switch envelope.type {
+    case "gameStart":
+      guard let event = try? JSONDecoder().decode(GameStartEvent.self, from: data) else { return }
+      isSearching = false
+      seekTask?.cancel()
+      seekTask = nil
+      streamState = .connected
+      activeGame = LichessGame(
+        id: event.game.gameId,
+        opponent: event.game.opponent.username,
+        opponentRating: event.game.opponent.rating,
+        myColor: event.game.color.capitalized,
+        speed: event.game.speed.capitalized,
+        status: event.game.status.name,
+        whiteTime: formatSeconds(event.game.secondsLeft),
+        blackTime: formatSeconds(event.game.secondsLeft),
+        isMyTurn: event.game.isMyTurn,
+        lastMove: event.game.lastMove,
+        moves: event.game.lastMove.isEmpty ? [] : [event.game.lastMove],
+        chat: []
+      )
+      isInGame = true
+      events.insert(
+        LichessEvent(title: "Game started", detail: "\(event.game.opponent.username) • \(event.game.speed.capitalized)", systemImage: "play.circle"),
+        at: 0
+      )
+    case "challenge":
+      guard let event = try? JSONDecoder().decode(ChallengeEvent.self, from: data) else { return }
+      let newChallenge = LichessChallenge(
+        id: event.challenge.id,
+        opponent: event.challenge.destUser?.name ?? event.challenge.challenger.name,
+        rating: event.challenge.challenger.rating ?? 1500,
+        control: event.challenge.timeControl?.show ?? "Challenge",
+        rated: event.challenge.rated,
+        status: .pending
+      )
+      challenges.removeAll { $0.id == newChallenge.id }
+      challenges.insert(newChallenge, at: 0)
+      events.insert(
+        LichessEvent(title: "Challenge received", detail: newChallenge.opponent, systemImage: "tray"),
+        at: 0
+      )
+    default:
+      break
+    }
+  }
+
+  private func sendChallenge(username: String, rating: Int, preset: SeekPreset, icon: String) async {
+    do {
+      let (data, response) = try await URLSession.shared.data(for: api.challengeRequest(username: username, preset: preset))
+      guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        let message = String(data: data, encoding: .utf8) ?? "Challenge failed."
+        events.insert(
+          LichessEvent(title: "Challenge failed", detail: message, systemImage: "exclamationmark.triangle"),
+          at: 0
+        )
+        return
+      }
+
+      let challengeID = (try? JSONDecoder().decode(ChallengeCreateResponse.self, from: data).challenge.id) ?? UUID().uuidString
+      challenges.removeAll { $0.id == challengeID }
+      challenges.insert(
+        LichessChallenge(
+          id: challengeID,
+          opponent: username,
+          rating: rating,
+          control: preset.title,
+          rated: preset.rated,
+          status: .pending
+        ),
+        at: 0
+      )
+      events.insert(
+        LichessEvent(title: "Challenge sent", detail: "\(username) • \(preset.title)", systemImage: icon),
+        at: 0
+      )
+    } catch {
+      events.insert(
+        LichessEvent(title: "Challenge failed", detail: error.localizedDescription, systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+    }
+  }
+
+  private func handleSeekFailure(message: String) {
+    isSearching = false
+    seekTask = nil
+    events.insert(
+      LichessEvent(title: "Seek ended", detail: message, systemImage: "exclamationmark.triangle"),
+      at: 0
+    )
+  }
+
+  private func recordEvent(title: String, detail: String, icon: String) {
+    events.insert(
+      LichessEvent(title: title, detail: detail, systemImage: icon),
+      at: 0
+    )
+  }
+
+  private func parseBotPlayer(from data: Data) throws -> LichessBotPlayer {
+    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+    let id = json?["id"] as? String ?? UUID().uuidString
+    let username = json?["username"] as? String ?? json?["name"] as? String ?? id
+    let title = json?["title"] as? String ?? "BOT"
+    let perfs = json?["perfs"] as? [String: Any]
+    let rapid = perfs?["rapid"] as? [String: Any]
+    let rating = rapid?["rating"] as? Int
+    return LichessBotPlayer(id: id, username: username, rating: rating, online: true, title: title)
+  }
+
+  private func parseFollowedPlayer(from data: Data) throws -> LichessFollowedPlayer {
+    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+    let id = json?["id"] as? String ?? UUID().uuidString
+    let username = json?["name"] as? String ?? json?["username"] as? String ?? id
+    let perfs = json?["perfs"] as? [String: Any]
+    let rapid = perfs?["rapid"] as? [String: Any]
+    let rating = rapid?["rating"] as? Int
+    let online = json?["online"] as? Bool ?? false
+    let url = "https://lichess.org/@/\(username)"
+    return LichessFollowedPlayer(id: id, username: username, rapidRating: rating, online: online, url: url)
+  }
+
+  private func formatSeconds(_ seconds: Int) -> String {
+    let minutes = seconds / 60
+    let remainder = seconds % 60
+    return String(format: "%02d:%02d", minutes, remainder)
+  }
+}
+
+private struct EventEnvelope: Decodable {
+  var type: String
+}
+
+private struct GameStartEvent: Decodable {
+  var game: StartedGame
+}
+
+private struct StartedGame: Decodable {
+  var gameId: String
+  var color: String
+  var lastMove: String
+  var speed: String
+  var status: Status
+  var opponent: Opponent
+  var isMyTurn: Bool
+  var secondsLeft: Int
+}
+
+private struct Status: Decodable {
+  var name: String
+}
+
+private struct Opponent: Decodable {
+  var username: String
+  var rating: Int
+}
+
+private struct ChallengeEvent: Decodable {
+  var challenge: IncomingChallenge
+}
+
+private struct IncomingChallenge: Decodable {
+  var id: String
+  var rated: Bool
+  var challenger: ChallengeUser
+  var destUser: ChallengeUser?
+  var timeControl: ChallengeTimeControl?
+}
+
+private struct ChallengeUser: Decodable {
+  var name: String
+  var rating: Int?
+}
+
+private struct ChallengeTimeControl: Decodable {
+  var show: String
+}
+
+private struct ChallengeCreateResponse: Decodable {
+  var challenge: CreatedChallenge
+}
+
+private struct CreatedChallenge: Decodable {
+  var id: String
 }

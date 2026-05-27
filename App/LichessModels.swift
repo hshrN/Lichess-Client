@@ -175,6 +175,34 @@ struct LichessGame {
       ]
     )
   }
+
+  init(
+    id: String,
+    opponent: String,
+    opponentRating: Int,
+    myColor: String,
+    speed: String,
+    status: String,
+    whiteTime: String,
+    blackTime: String,
+    isMyTurn: Bool,
+    lastMove: String,
+    moves: [String],
+    chat: [ChatLine]
+  ) {
+    self.id = id
+    self.opponent = opponent
+    self.opponentRating = opponentRating
+    self.myColor = myColor
+    self.speed = speed
+    self.status = status
+    self.whiteTime = whiteTime
+    self.blackTime = blackTime
+    self.isMyTurn = isMyTurn
+    self.lastMove = lastMove
+    self.moves = moves
+    self.chat = chat
+  }
 }
 
 struct LichessChallenge: Identifiable {

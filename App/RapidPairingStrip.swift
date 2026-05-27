@@ -8,7 +8,9 @@ struct RapidPairingStrip: View {
       HStack(spacing: 10) {
         ForEach(SeekPreset.defaults) { preset in
           Button {
-            model.seek(preset)
+            Task {
+              await model.seek(preset)
+            }
           } label: {
             VStack(alignment: .leading, spacing: 4) {
               Text(preset.title)

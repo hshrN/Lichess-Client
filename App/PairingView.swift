@@ -10,7 +10,9 @@ struct PairingView: View {
 
       ForEach(SeekPreset.defaults) { preset in
         Button {
-          model.seek(preset)
+          Task {
+            await model.seek(preset)
+          }
         } label: {
           HStack(spacing: 12) {
             Image(systemName: preset.days == nil ? "timer" : "calendar")
