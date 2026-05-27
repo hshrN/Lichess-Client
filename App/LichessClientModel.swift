@@ -4,16 +4,8 @@ import ChessKit
 @Observable
 @MainActor
 final class LichessClientModel {
-  var accessToken = UserDefaults.standard.string(forKey: "lichessAccessToken") ?? "" {
-    didSet {
-      UserDefaults.standard.set(accessToken, forKey: "lichessAccessToken")
-    }
-  }
-  var accountUsername = UserDefaults.standard.string(forKey: "lichessUsername") ?? "" {
-    didSet {
-      UserDefaults.standard.set(accountUsername, forKey: "lichessUsername")
-    }
-  }
+  var accessToken = ""
+  var accountUsername = ""
   var streamState = StreamConnectionState.disconnected
   var activeGame = LichessGame.sample
   var isInGame = false
@@ -31,6 +23,14 @@ final class LichessClientModel {
   var draftMessage = ""
   var selectedSquare: BoardSquare?
   var board = Board()
+
+  init() {
+    if let session = LichessAuthStore.loadSession() {
+      accessToken = session.accessToken
+      accountUsername = session.username
+      streamState = .connected
+    }
+  }
 
   var isConfigured: Bool {
     !accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -52,6 +52,7 @@ final class LichessClientModel {
       let session = try await LichessOAuth.signIn()
       accessToken = session.accessToken
       accountUsername = session.username
+      LichessAuthStore.saveSession(accessToken: session.accessToken, username: session.username)
       streamState = .connected
       events.insert(
         LichessEvent(title: "Signed in", detail: session.username, systemImage: "person.crop.circle.badge.checkmark"),
@@ -82,6 +83,7 @@ final class LichessClientModel {
 
     accessToken = ""
     accountUsername = ""
+    LichessAuthStore.clearSession()
     streamState = .disconnected
     isSearching = false
     events.insert(

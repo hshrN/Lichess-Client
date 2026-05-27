@@ -14,7 +14,7 @@ The app currently includes:
 - Challenge inbox preview for incoming/outgoing challenge state.
 - A board screen that appears only after a search/game starts.
 - Player and spectator chat UI.
-- Native Lichess OAuth sign-in using the authorization code flow with PKCE.
+- Native Lichess OAuth sign-in using the authorization code flow with PKCE and Keychain-backed session storage.
 - Appearance setting for System, Light, and Dark modes.
 - `THIRD_PARTY_NOTICES.md` for dependency license tracking.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
@@ -32,6 +32,7 @@ The app now uses Lichess OAuth instead of manual token entry.
 - Scopes currently requested: `board:play`, `challenge:read`, `challenge:write`
 
 This follows the public-client guidance used by the official Lichess API demo app.
+The OAuth session is now stored in the iOS Keychain. Older `UserDefaults` sessions are migrated once and then cleared.
 
 ## Lichess Board API Constraints
 
@@ -144,7 +145,7 @@ The current implementation is split into:
 
 Recommended next architectural additions:
 
-- `LichessAuthStore`: move OAuth tokens from `UserDefaults` to Keychain.
+- `LichessAuthStore`: Keychain-backed OAuth session storage.
 - `NDJSONStreamClient`: consume Lichess newline-delimited JSON streams using `URLSession`.
 - `LichessEventDecoder`: decode `gameStart`, `gameFinish`, challenge, `gameFull`, `gameState`, `chatLine`, and `opponentGone` events.
 - `GameStateReducer`: merge stream events into local board, clock, chat, and action state.
@@ -152,18 +153,17 @@ Recommended next architectural additions:
 
 ## Implementation Milestones
 
-1. Move the OAuth access token from `UserDefaults` to Keychain.
-2. Connect `GET /api/stream/event` and show incoming rapid games and challenges.
-3. Connect `GET /api/board/game/stream/{gameId}` and reconcile `gameFull` plus `gameState`.
-4. Replace the static board pieces with a FEN/move-derived board model.
-5. Validate taps into legal local UCI move candidates without suggesting moves.
-6. Submit moves through `POST /api/board/game/{gameId}/move/{move}`.
-7. Parse `GET /api/rel/following` NDJSON into the challenge list.
-8. Wire direct challenges with `POST /api/challenge/{username}`.
-9. Wire bot play through `POST /api/challenge/ai` and online bot listings.
-10. Wire chat, resign, abort, draw, takeback, and claim actions.
-11. Add resilient stream reconnect behavior and clear user-facing error states.
-12. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
+1. Connect `GET /api/stream/event` and show incoming rapid games and challenges.
+2. Connect `GET /api/board/game/stream/{gameId}` and reconcile `gameFull` plus `gameState`.
+3. Replace the static board pieces with a FEN/move-derived board model.
+4. Validate taps into legal local UCI move candidates without suggesting moves.
+5. Submit moves through `POST /api/board/game/{gameId}/move/{move}`.
+6. Parse `GET /api/rel/following` NDJSON into the challenge list.
+7. Wire direct challenges with `POST /api/challenge/{username}`.
+8. Wire bot play through `POST /api/challenge/ai` and online bot listings.
+9. Wire chat, resign, abort, draw, takeback, and claim actions.
+10. Add resilient stream reconnect behavior and clear user-facing error states.
+11. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
 
 ## Fair Play Requirements
 
