@@ -16,9 +16,9 @@ struct FollowingChallengeView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 14) {
       HStack {
-        Text("Challenge")
+        Label("Challenge Following", systemImage: "person.crop.circle.badge.plus")
           .font(.headline)
         Spacer()
         Button("Following", systemImage: "arrow.clockwise") {
@@ -31,8 +31,15 @@ struct FollowingChallengeView: View {
         .font(.caption.weight(.semibold))
       }
 
-      TextField("Search following", text: $model.playerSearchText)
-        .textFieldStyle(.roundedBorder)
+      HStack {
+        Image(systemName: "magnifyingglass")
+          .foregroundStyle(.secondary)
+        TextField("Search following", text: $model.playerSearchText)
+          .textInputAutocapitalization(.never)
+          .autocorrectionDisabled()
+      }
+      .padding(11)
+      .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
 
       ForEach(filteredPlayers) { player in
         HStack(spacing: 12) {
@@ -62,8 +69,10 @@ struct FollowingChallengeView: View {
           .buttonStyle(.bordered)
         }
         .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+        .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
       }
     }
+    .padding(16)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
   }
 }

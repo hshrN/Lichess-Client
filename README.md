@@ -6,10 +6,11 @@ Lichess Board is a minimal native iOS client for playing rapid Lichess games thr
 
 The app currently includes:
 
-- A minimal home screen with a primary rapid Play button.
+- A richer iOS dashboard with play controls, following challenges, challenge inbox, activity, and token status.
 - A tappable board UI that stages UCI moves.
 - Rapid-only seek presets that map to Lichess Board API seeks.
 - Following list and direct challenge UI for players the user follows.
+- Challenge inbox preview for incoming/outgoing challenge state.
 - A board screen that appears only after a search/game starts.
 - Player and spectator chat UI.
 - Token entry screen for future authenticated API calls.

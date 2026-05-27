@@ -200,7 +200,7 @@ struct ChatLine: Identifiable {
 }
 
 struct SeekPreset: Identifiable {
-  var id = UUID()
+  var id: String { title }
   var title: String
   var time: Int?
   var increment: Int?

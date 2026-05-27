@@ -5,31 +5,122 @@ struct RapidHomeView: View {
   var showSettings: () -> Void
 
   var body: some View {
-    VStack(spacing: 24) {
-      VStack(spacing: 8) {
-        Image(systemName: "bolt.fill")
-          .font(.system(size: 42, weight: .semibold))
-          .foregroundStyle(.tint)
-          .frame(width: 72, height: 72)
-          .background(.tint.opacity(0.12), in: .circle)
+    VStack(spacing: 20) {
+      HomeDashboardView(model: model, showSettings: showSettings)
+      PlayControlPanel(model: model, showSettings: showSettings)
+      FollowingChallengeView(model: model, showSettings: showSettings)
+      ChallengeInboxPanel(model: model)
+      EventFeedCompactView(events: model.events)
+    }
+  }
+}
 
-        Text("Rapid")
-          .font(.largeTitle.bold())
-        Text("Find a 10+5 rapid game on Lichess.")
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-          .multilineTextAlignment(.center)
+private struct HomeDashboardView: View {
+  var model: LichessClientModel
+  var showSettings: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Lichess Rapid")
+            .font(.largeTitle.bold())
+          Text("Play, challenge friends, and manage live games from one native iOS dashboard.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+
+        Spacer()
+
+        Button("Token", systemImage: model.isConfigured ? "checkmark.seal.fill" : "key.fill") {
+          showSettings()
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.bordered)
+        .accessibilityLabel("Token settings")
       }
-      .padding(.top, 36)
+
+      HStack(spacing: 10) {
+        DashboardMetric(title: "Status", value: model.streamState.title, systemImage: "antenna.radiowaves.left.and.right")
+        DashboardMetric(title: "Following", value: "\(model.following.count)", systemImage: "person.2")
+        DashboardMetric(title: "Inbox", value: "\(model.challenges.filter { $0.status == .pending }.count)", systemImage: "tray")
+      }
+    }
+    .padding(18)
+    .background(
+      LinearGradient(
+        colors: [Color.accentColor.opacity(0.18), Color(.secondarySystemGroupedBackground)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      ),
+      in: .rect(cornerRadius: 20)
+    )
+  }
+}
+
+private struct DashboardMetric: View {
+  var title: String
+  var value: String
+  var systemImage: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Image(systemName: systemImage)
+        .foregroundStyle(.tint)
+      Text(value)
+        .font(.headline)
+      Text(title)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(12)
+    .background(Color(.systemBackground).opacity(0.72), in: .rect(cornerRadius: 14))
+  }
+}
+
+private struct PlayControlPanel: View {
+  @Bindable var model: LichessClientModel
+  var showSettings: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack {
+        Label("Play", systemImage: "bolt.fill")
+          .font(.headline)
+        Spacer()
+        Text(model.selectedSeekPreset.rated ? "Rated" : "Casual")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+      }
+
+      HStack(spacing: 8) {
+        ForEach(SeekPreset.defaults) { preset in
+          Button {
+            model.selectSeekPreset(preset)
+          } label: {
+            Text(preset.title.replacingOccurrences(of: "Rapid ", with: ""))
+              .font(.subheadline.weight(.semibold))
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 10)
+              .background(
+                model.selectedSeekPreset.id == preset.id ? Color.accentColor.opacity(0.18) : Color(.tertiarySystemGroupedBackground),
+                in: .rect(cornerRadius: 10)
+              )
+          }
+          .buttonStyle(.plain)
+        }
+      }
 
       Button {
         if model.isConfigured {
-          model.seek(SeekPreset.defaults[0])
+          model.seek(model.selectedSeekPreset)
         } else {
           showSettings()
         }
       } label: {
-        Label(model.isSearching ? "Searching…" : "Play", systemImage: model.isSearching ? "hourglass" : "play.fill")
+        Label(model.isSearching ? "Searching…" : "Play \(model.selectedSeekPreset.title)", systemImage: model.isSearching ? "hourglass" : "play.fill")
           .font(.title3.bold())
           .frame(maxWidth: .infinity)
           .padding(.vertical, 16)
@@ -38,43 +129,58 @@ struct RapidHomeView: View {
       .controlSize(.large)
 
       if model.isSearching {
-        VStack(spacing: 10) {
+        HStack(spacing: 12) {
           ProgressView()
-          Button("Open Preview Game") {
+          Text("Waiting for Lichess to pair a rapid game.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+          Spacer()
+          Button("Preview") {
             model.openPreviewGame()
           }
           .font(.subheadline.weight(.semibold))
         }
       }
-
-      VStack(spacing: 10) {
-        ForEach(SeekPreset.defaults.dropFirst()) { preset in
-          Button {
-            if model.isConfigured {
-              model.seek(preset)
-            } else {
-              showSettings()
-            }
-          } label: {
-            HStack {
-              Text(preset.title)
-                .font(.subheadline.weight(.semibold))
-              Spacer()
-              Text(preset.rated ? "Rated" : "Casual")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            .padding(14)
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 12))
-          }
-          .buttonStyle(.plain)
-        }
-      }
-
-      FollowingChallengeView(model: model, showSettings: showSettings)
-
-      EventFeedCompactView(events: model.events)
     }
+    .padding(16)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
+  }
+}
+
+private struct ChallengeInboxPanel: View {
+  var model: LichessClientModel
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Label("Challenge Inbox", systemImage: "tray")
+        .font(.headline)
+
+      ForEach(model.challenges.prefix(3)) { challenge in
+        HStack(spacing: 12) {
+          Image(systemName: challenge.status == .pending ? "clock" : "checkmark.circle")
+            .foregroundStyle(.tint)
+            .frame(width: 28)
+
+          VStack(alignment: .leading, spacing: 2) {
+            Text(challenge.opponent)
+              .font(.subheadline.weight(.semibold))
+            Text("\(challenge.control) • \(challenge.rated ? "Rated" : "Casual")")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+
+          Spacer()
+
+          Text(challenge.status.title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+      }
+    }
+    .padding(16)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
   }
 }
 
@@ -83,7 +189,10 @@ private struct EventFeedCompactView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      ForEach(events.prefix(2)) { event in
+      Label("Activity", systemImage: "waveform.path.ecg")
+        .font(.headline)
+
+      ForEach(events.prefix(3)) { event in
         Label {
           VStack(alignment: .leading, spacing: 2) {
             Text(event.title)
@@ -99,7 +208,7 @@ private struct EventFeedCompactView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
-    .padding(14)
-    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+    .padding(16)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
   }
 }

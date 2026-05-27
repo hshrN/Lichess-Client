@@ -11,6 +11,7 @@ final class LichessClientModel {
   var challenges = LichessChallenge.samples
   var following = LichessFollowedPlayer.samples
   var playerSearchText = ""
+  var selectedSeekPreset = SeekPreset.defaults[0]
   var events = LichessEvent.samples
   var selectedRoom = ChatRoom.player
   var draftMessage = ""
@@ -68,6 +69,10 @@ final class LichessClientModel {
       LichessEvent(title: "Following refresh queued", detail: "/api/rel/following", systemImage: "person.2"),
       at: 0
     )
+  }
+
+  func selectSeekPreset(_ preset: SeekPreset) {
+    selectedSeekPreset = preset
   }
 
   func challenge(_ player: LichessFollowedPlayer, preset: SeekPreset = SeekPreset.defaults[0]) {
