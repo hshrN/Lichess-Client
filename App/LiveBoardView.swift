@@ -5,6 +5,7 @@ struct LiveBoardView: View {
 
   var body: some View {
     VStack(spacing: 12) {
+      RapidHeaderView(model: model)
       GameClockRow(game: model.activeGame)
       ChessBoardView(model: model)
       MoveControlsView(model: model)

@@ -8,9 +8,13 @@ struct ContentView: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 18) {
-          RapidHeaderView(model: model)
-          RapidPairingStrip(model: model)
-          LiveBoardView(model: model)
+          if model.isInGame {
+            LiveBoardView(model: model)
+          } else {
+            RapidHomeView(model: model) {
+              showingSettings = true
+            }
+          }
         }
         .frame(maxWidth: .infinity)
         .padding()
@@ -18,6 +22,14 @@ struct ContentView: View {
       .background(Color(.systemGroupedBackground))
       .navigationTitle("Rapid")
       .toolbar {
+        if model.isInGame {
+          ToolbarItem(placement: .topBarLeading) {
+            Button("Home", systemImage: "chevron.left") {
+              model.returnHome()
+            }
+          }
+        }
+
         ToolbarItemGroup(placement: .topBarTrailing) {
           Button("Refresh", systemImage: "arrow.clockwise") {
             model.refreshMockStream()

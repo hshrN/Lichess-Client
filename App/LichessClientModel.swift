@@ -5,6 +5,8 @@ final class LichessClientModel {
   var accessToken = ""
   var streamState = StreamConnectionState.disconnected
   var activeGame = LichessGame.sample
+  var isInGame = false
+  var isSearching = false
   var challenges = LichessChallenge.samples
   var events = LichessEvent.samples
   var selectedRoom = ChatRoom.player
@@ -28,14 +30,37 @@ final class LichessClientModel {
   }
 
   func seek(_ preset: SeekPreset) {
+    guard isConfigured else {
+      streamState = .disconnected
+      events.insert(
+        LichessEvent(title: "Token required", detail: "Add a Lichess API token before searching.", systemImage: "key")
+        , at: 0
+      )
+      return
+    }
+
+    isSearching = true
+    streamState = .connected
     events.insert(
       LichessEvent(
-        title: "Seek prepared",
-        detail: "\(preset.title), \(preset.rated ? "rated" : "casual"), \(preset.color.title.lowercased()).",
+        title: "Searching rapid",
+        detail: "\(preset.title), \(preset.rated ? "rated" : "casual").",
         systemImage: "scope"
       ),
       at: 0
     )
+  }
+
+  func openPreviewGame() {
+    isSearching = false
+    isInGame = true
+    activeGame.status = "started"
+  }
+
+  func returnHome() {
+    isInGame = false
+    isSearching = false
+    selectedSquare = nil
   }
 
   func accept(_ challenge: LichessChallenge) {
