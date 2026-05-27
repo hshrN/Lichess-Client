@@ -17,6 +17,37 @@ The app currently includes:
 
 Most UI actions currently update local preview state. Live networking is intentionally isolated behind the API layer so authentication, streaming, and state reconciliation can be added cleanly.
 
+## Lichess Board API Constraints
+
+This app must use the official Lichess Board API for playing moves. Lichess warns that clients not using the official Board API for board-style play can put accounts at risk.
+
+Supported Board API time controls:
+
+- Rapid
+- Classical
+- Correspondence
+- Blitz only for direct challenges, games vs AI, or bulk pairing challenges
+
+Not supported for normal public Board API seeking:
+
+- Bullet
+- UltraBullet
+- General blitz pool seeking
+
+Fair-play constraints:
+
+- Real-time Board API games must not show engines, opening explorers, opening books, endgame tablebases, advice, evaluations, best moves, or hints.
+- Correspondence Board API games may use opening books/databases and Lichess opening explorer, but not engines, tablebases, outside advice, or move recommendations.
+- Programmatic moves are allowed only through the official Board API or Bot API, not browser automation.
+- API clients should make one request at a time and wait a full minute after HTTP `429` before resuming.
+
+Reference pages:
+
+- https://lichess.org/page/eboards
+- https://lichess.org/page/fair-play
+- https://lichess.org/page/api-tips
+- https://lichess-org.github.io/api/
+
 ## Lichess Board API Scope
 
 Primary endpoints planned for the app:
@@ -35,6 +66,44 @@ Primary endpoints planned for the app:
 - `POST /api/board/game/{gameId}/claim-draw`
 
 The global event stream should be opened before creating real-time seeks so the app does not miss a fast game-start event.
+
+## Chess Library Research
+
+The app should not hand-roll chess rules. We need a rules library for board state, local move validation, FEN parsing, promotion, castling, en passant, check state, and game-end state. This is not engine assistance as long as it is only used to validate and render the user’s own legal moves.
+
+Recommended option:
+
+- `chesskit-app/chesskit-swift`
+- URL: https://github.com/chesskit-app/chesskit-swift
+- Swift Package Manager compatible.
+- MIT license.
+- Swift-native.
+- Supports board representation, legal move validation, making moves, FEN parsing, PGN parsing, SAN parsing, promotion, castling, en passant, check, stalemate, checkmate, and draws.
+- Does not require bundling Stockfish or an evaluation engine.
+
+Secondary option:
+
+- `aperechnev/ChessKit`
+- URL: https://github.com/aperechnev/ChessKit
+- Swift Package Manager compatible.
+- Lightweight Swift chess framework.
+- Appears useful for legal moves and FEN/PGN basics, but needs deeper API review before choosing it over `chesskit-app/chesskit-swift`.
+
+UI-adjacent option:
+
+- `rohanrhu/ChessboardKit`
+- URL: https://github.com/rohanrhu/ChessboardKit
+- SwiftUI chessboard package built around ChessKit.
+- Could accelerate board interaction, but we should be careful: the app needs a custom native Lichess feel, so a full board UI dependency may be less valuable than using ChessKit for rules and keeping our own board view.
+
+Recommended path:
+
+1. Add `chesskit-app/chesskit-swift`.
+2. Replace the current static board array with a `ChessKit` position initialized from Lichess `initialFen`.
+3. Replay Lichess UCI moves from `gameState.moves`.
+4. Use legal moves only to drive tap targets and reject impossible input.
+5. Send the selected legal move to Lichess as UCI.
+6. Never expose engine evaluation, best-move ranking, opening-book help, or analysis during active games.
 
 ## Architecture
 
