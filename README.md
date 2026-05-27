@@ -27,8 +27,11 @@ The app now has a mixed state:
 - Live direct challenges to followed players and online bot accounts
 - Live online bot list refresh
 - Live per-game board stream with clock, status, chat-line, and move-list updates
+- Live move submission
+- Live chat submission
+- Live abort and resign actions
 
-Some flows are still incomplete, especially action endpoints from inside a live game and robust reconnect handling.
+Some flows are still incomplete, especially draw/takeback/claim actions, promotion choice UI, and robust reconnect handling.
 
 ## Authentication
 
@@ -162,8 +165,8 @@ Recommended next architectural additions:
 
 ## Implementation Milestones
 
-1. Submit moves through `POST /api/board/game/{gameId}/move/{move}`.
-2. Wire chat sending and game actions: resign, abort, draw, takeback, and claim flows.
+1. Add draw, takeback, and claim action endpoints to the live game UI.
+2. Add promotion choice UI instead of defaulting promotions to queen.
 3. Improve event/game stream reconnect behavior and cancellation semantics.
 4. Replace the remaining ad hoc JSON parsing with stronger typed decoding.
 5. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
@@ -192,5 +195,6 @@ Post-game review can be considered later only if it is clearly separated from ac
 - Bot/following challenge buttons create real challenge requests.
 - A `gameStart` event opens the game screen.
 - `gameFull` and `gameState` update the board, clocks, and status.
-- Chat composer adds messages to the selected room.
-- Abort and resign buttons update the event feed.
+- Tapping a legal move sends a real move request to Lichess.
+- Chat composer sends real player/spectator chat messages.
+- Abort and resign buttons send real game actions.

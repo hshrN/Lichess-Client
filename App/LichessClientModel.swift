@@ -22,6 +22,9 @@ final class LichessClientModel {
   var draftMessage = ""
   var selectedSquare: BoardSquare?
   var board = Board()
+  var isSubmittingMove = false
+  var isSendingChat = false
+  var isSubmittingGameAction = false
   private var eventStreamTask: Task<Void, Never>?
   private var seekTask: Task<Void, Never>?
   private var gameStreamTask: Task<Void, Never>?
@@ -330,6 +333,10 @@ final class LichessClientModel {
       return
     }
 
+    guard !isSubmittingMove else {
+      return
+    }
+
     let start = Square(selectedSquare.uci)
     let end = Square(square.uci)
     guard board.canMove(pieceAt: start, to: end) else {
@@ -340,15 +347,42 @@ final class LichessClientModel {
       return
     }
 
-    board.move(pieceAt: start, to: end)
-    let move = "\(selectedSquare.uci)\(square.uci)"
-    activeGame.lastMove = move
-    activeGame.moves.append(move)
-    activeGame.isMyTurn.toggle()
+    guard !activeGame.id.isEmpty else {
+      events.insert(
+        LichessEvent(title: "Move blocked", detail: "No live game is connected.", systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+      return
+    }
+
+    let move = outgoingMove(from: selectedSquare, to: square)
+    isSubmittingMove = true
     events.insert(
-      LichessEvent(title: "Move staged", detail: move, systemImage: "arrow.up.right.square")
-      , at: 0
+      LichessEvent(title: "Sending move", detail: move, systemImage: "arrow.up.right.square"),
+      at: 0
     )
+
+    Task { [weak self] in
+      guard let self else { return }
+      do {
+        let (_, response) = try await URLSession.shared.data(for: self.api.moveRequest(gameId: self.activeGame.id, move: move))
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+          await self.recordEvent(title: "Move failed", detail: move, icon: "exclamationmark.triangle")
+          await MainActor.run {
+            self.isSubmittingMove = false
+          }
+          return
+        }
+        await MainActor.run {
+          self.isSubmittingMove = false
+        }
+      } catch {
+        await self.recordEvent(title: "Move failed", detail: error.localizedDescription, icon: "exclamationmark.triangle")
+        await MainActor.run {
+          self.isSubmittingMove = false
+        }
+      }
+    }
   }
 
   func legalDestinations(for square: BoardSquare) -> Set<BoardSquare> {
@@ -386,27 +420,45 @@ final class LichessClientModel {
       return
     }
 
-    activeGame.chat.insert(
-      ChatLine(user: "You", text: text, room: selectedRoom),
-      at: 0
-    )
+    guard !activeGame.id.isEmpty, !isSendingChat else {
+      return
+    }
+
+    isSendingChat = true
+    let room = selectedRoom
     draftMessage = ""
+    Task { [weak self] in
+      guard let self else { return }
+      do {
+        let (_, response) = try await URLSession.shared.data(for: self.api.chatRequest(gameId: self.activeGame.id, room: room, text: text))
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+          await self.recordEvent(title: "Chat failed", detail: text, icon: "exclamationmark.triangle")
+          await MainActor.run {
+            self.draftMessage = text
+            self.isSendingChat = false
+          }
+          return
+        }
+        await self.recordEvent(title: "Chat sent", detail: text, icon: "paperplane")
+        await MainActor.run {
+          self.isSendingChat = false
+        }
+      } catch {
+        await self.recordEvent(title: "Chat failed", detail: error.localizedDescription, icon: "exclamationmark.triangle")
+        await MainActor.run {
+          self.draftMessage = text
+          self.isSendingChat = false
+        }
+      }
+    }
   }
 
   func resign() {
-    activeGame.status = "resigning"
-    events.insert(
-      LichessEvent(title: "Resign action queued", detail: activeGame.id, systemImage: "flag")
-      , at: 0
-    )
+    submitGameAction(title: "Resign", icon: "flag", request: api.resignRequest(gameId: activeGame.id))
   }
 
   func abort() {
-    activeGame.status = "aborting"
-    events.insert(
-      LichessEvent(title: "Abort action queued", detail: activeGame.id, systemImage: "stop.circle")
-      , at: 0
-    )
+    submitGameAction(title: "Abort", icon: "stop.circle", request: api.abortRequest(gameId: activeGame.id))
   }
 
   private func updateChallenge(_ challenge: LichessChallenge, status: ChallengeStatus) {
@@ -718,6 +770,50 @@ final class LichessClientModel {
 
   private func formatMilliseconds(_ milliseconds: Int) -> String {
     formatSeconds(max(milliseconds / 1000, 0))
+  }
+
+  private func outgoingMove(from start: BoardSquare, to end: BoardSquare) -> String {
+    let base = "\(start.uci)\(end.uci)"
+    guard
+      let piece = board.position.piece(at: Square(start.uci)),
+      piece.kind == .pawn,
+      (piece.color == .white && end.rank == 7) || (piece.color == .black && end.rank == 0)
+    else {
+      return base
+    }
+    return "\(base)q"
+  }
+
+  private func submitGameAction(title: String, icon: String, request: URLRequest) {
+    guard !activeGame.id.isEmpty, !isSubmittingGameAction else {
+      return
+    }
+
+    isSubmittingGameAction = true
+    events.insert(
+      LichessEvent(title: "\(title) requested", detail: activeGame.id, systemImage: icon),
+      at: 0
+    )
+
+    Task { [weak self] in
+      guard let self else { return }
+      defer {
+        Task { @MainActor in
+          self.isSubmittingGameAction = false
+        }
+      }
+
+      do {
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+          await self.recordEvent(title: "\(title) failed", detail: "Lichess rejected the request.", icon: "exclamationmark.triangle")
+          return
+        }
+        await self.recordEvent(title: "\(title) sent", detail: activeGame.id, icon: icon)
+      } catch {
+        await self.recordEvent(title: "\(title) failed", detail: error.localizedDescription, icon: "exclamationmark.triangle")
+      }
+    }
   }
 }
 

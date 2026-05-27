@@ -103,7 +103,7 @@ private struct ChessBoardView: View {
 }
 
 private struct MoveControlsView: View {
-  var model: LichessClientModel
+  @Bindable var model: LichessClientModel
 
   var body: some View {
     HStack(spacing: 10) {
@@ -111,6 +111,7 @@ private struct MoveControlsView: View {
         model.abort()
       }
       .buttonStyle(.bordered)
+      .disabled(model.isSubmittingGameAction)
 
       Button("Draw", systemImage: "equal.circle") {}
         .buttonStyle(.bordered)
@@ -119,6 +120,7 @@ private struct MoveControlsView: View {
         model.resign()
       }
       .buttonStyle(.borderedProminent)
+      .disabled(model.isSubmittingGameAction)
     }
     .frame(maxWidth: .infinity)
   }
@@ -139,6 +141,7 @@ private struct ChatComposerView: View {
         .labelStyle(.iconOnly)
         .buttonStyle(.borderedProminent)
         .accessibilityLabel("Send chat")
+        .disabled(model.isSendingChat)
       }
 
       ForEach(model.activeGame.chat.prefix(2)) { line in

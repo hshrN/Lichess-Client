@@ -21,6 +21,28 @@ struct LichessBoardAPI {
     return request
   }
 
+  func chatRequest(gameId: String, room: ChatRoom, text: String) -> URLRequest {
+    var request = authenticatedRequest(path: "/api/board/game/\(gameId)/chat")
+    request.httpMethod = "POST"
+    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.httpBody = formBody(
+      for: [
+        URLQueryItem(name: "room", value: room.rawValue),
+        URLQueryItem(name: "text", value: text)
+      ]
+    )
+    return request
+  }
+
+  func abortRequest(gameId: String) -> URLRequest {
+    postRequest(path: "/api/board/game/\(gameId)/abort")
+  }
+
+  func resignRequest(gameId: String) -> URLRequest {
+    postRequest(path: "/api/board/game/\(gameId)/resign")
+  }
+
   func seekRequest(preset: SeekPreset) -> URLRequest {
     var request = authenticatedRequest(path: "/api/board/seek")
     request.httpMethod = "POST"
