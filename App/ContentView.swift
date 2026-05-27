@@ -38,11 +38,11 @@ struct ContentView: View {
           .labelStyle(.iconOnly)
           .accessibilityLabel("Refresh stream")
 
-          Button("Account", systemImage: model.isConfigured ? "person.crop.circle.fill.badge.checkmark" : "person.crop.circle") {
+          Button("Settings", systemImage: "ellipsis.circle") {
             showingSettings = true
           }
           .labelStyle(.iconOnly)
-          .accessibilityLabel("Lichess account")
+          .accessibilityLabel("Settings")
         }
       }
       .sheet(isPresented: $showingSettings) {

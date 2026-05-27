@@ -31,15 +31,6 @@ private struct HomeDashboardView: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
-
-        Spacer()
-
-        Button("Token", systemImage: model.isConfigured ? "checkmark.seal.fill" : "key.fill") {
-          showSettings()
-        }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.bordered)
-        .accessibilityLabel("Lichess account")
       }
 
       HStack(spacing: 10) {
