@@ -1,0 +1,69 @@
+import SwiftUI
+
+struct FollowingChallengeView: View {
+  @Bindable var model: LichessClientModel
+  var showSettings: () -> Void
+
+  private var filteredPlayers: [LichessFollowedPlayer] {
+    let query = model.playerSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !query.isEmpty else {
+      return model.following
+    }
+
+    return model.following.filter {
+      $0.username.localizedCaseInsensitiveContains(query)
+    }
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Text("Challenge")
+          .font(.headline)
+        Spacer()
+        Button("Following", systemImage: "arrow.clockwise") {
+          if model.isConfigured {
+            model.refreshFollowing()
+          } else {
+            showSettings()
+          }
+        }
+        .font(.caption.weight(.semibold))
+      }
+
+      TextField("Search following", text: $model.playerSearchText)
+        .textFieldStyle(.roundedBorder)
+
+      ForEach(filteredPlayers) { player in
+        HStack(spacing: 12) {
+          Circle()
+            .fill(player.online ? Color.green : Color.secondary.opacity(0.35))
+            .frame(width: 9, height: 9)
+
+          VStack(alignment: .leading, spacing: 2) {
+            Text(player.username)
+              .font(.subheadline.weight(.semibold))
+            Text(player.rapidRating.map { "Rapid \($0)" } ?? "Rapid unrated")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+
+          Spacer()
+
+          Button("10+5", systemImage: "paperplane.fill") {
+            if model.isConfigured {
+              model.challenge(player)
+            } else {
+              showSettings()
+            }
+          }
+          .labelStyle(.titleAndIcon)
+          .font(.caption.weight(.semibold))
+          .buttonStyle(.bordered)
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+      }
+    }
+  }
+}

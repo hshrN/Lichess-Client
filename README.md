@@ -9,6 +9,7 @@ The app currently includes:
 - A minimal home screen with a primary rapid Play button.
 - A tappable board UI that stages UCI moves.
 - Rapid-only seek presets that map to Lichess Board API seeks.
+- Following list and direct challenge UI for players the user follows.
 - A board screen that appears only after a search/game starts.
 - Player and spectator chat UI.
 - Token entry screen for future authenticated API calls.
@@ -67,6 +68,11 @@ Primary endpoints planned for the app:
 - `POST /api/board/game/{gameId}/takeback/{accept}`
 - `POST /api/board/game/{gameId}/claim-victory`
 - `POST /api/board/game/{gameId}/claim-draw`
+- `GET /api/rel/following`
+- `GET /api/challenge`
+- `POST /api/challenge/{username}`
+- `POST /api/challenge/{challengeId}/accept`
+- `POST /api/challenge/{challengeId}/decline`
 
 The global event stream should be opened before creating real-time seeks so the app does not miss a fast game-start event.
 
@@ -116,6 +122,7 @@ The current implementation is split into:
 - `LichessClientModel`: app state, local action handlers, and preview stream behavior.
 - `LichessModels`: strongly typed app models and enums.
 - `LichessBoardAPI`: authenticated URL request construction for Board API calls.
+- Challenge/following request builders for `GET /api/rel/following`, `GET /api/challenge`, direct challenge creation, accept, and decline.
 - SwiftUI screen files for the board, pairing, challenges, settings, and header.
 
 Recommended next architectural additions:
@@ -134,9 +141,11 @@ Recommended next architectural additions:
 4. Replace the static board pieces with a FEN/move-derived board model.
 5. Validate taps into legal local UCI move candidates without suggesting moves.
 6. Submit moves through `POST /api/board/game/{gameId}/move/{move}`.
-7. Wire chat, resign, abort, draw, takeback, and claim actions.
-8. Add resilient stream reconnect behavior and clear user-facing error states.
-9. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
+7. Parse `GET /api/rel/following` NDJSON into the challenge list.
+8. Wire direct challenges with `POST /api/challenge/{username}`.
+9. Wire chat, resign, abort, draw, takeback, and claim actions.
+10. Add resilient stream reconnect behavior and clear user-facing error states.
+11. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
 
 ## Fair Play Requirements
 
@@ -159,5 +168,6 @@ Post-game review can be considered later only if it is clearly separated from ac
 - Home screen starts with Play, not a chessboard.
 - Board taps stage a UCI move after entering a game.
 - Rapid seek preset buttons add seek events.
+- Following refresh and challenge buttons add challenge events.
 - Chat composer adds messages to the selected room.
 - Abort and resign buttons update the event feed.

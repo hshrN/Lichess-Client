@@ -79,6 +79,22 @@ enum ChallengeStatus: String {
   }
 }
 
+enum ChallengeDeclineReason: String, CaseIterable, Identifiable {
+  case generic
+  case later
+  case tooFast
+  case tooSlow
+  case timeControl
+  case rated
+  case casual
+  case standard
+  case variant
+  case noBot
+  case onlyBot
+
+  var id: String { rawValue }
+}
+
 enum SeekColor: String, CaseIterable, Identifiable {
   case random
   case white
@@ -92,6 +108,22 @@ enum SeekColor: String, CaseIterable, Identifiable {
     case .white: "White"
     case .black: "Black"
     }
+  }
+}
+
+struct LichessFollowedPlayer: Identifiable {
+  var id: String
+  var username: String
+  var rapidRating: Int?
+  var online: Bool
+  var url: String
+
+  static var samples: [LichessFollowedPlayer] {
+    [
+      LichessFollowedPlayer(id: "bobby", username: "bobby", rapidRating: 1751, online: true, url: "https://lichess.org/@/bobby"),
+      LichessFollowedPlayer(id: "mary", username: "mary", rapidRating: 1021, online: true, url: "https://lichess.org/@/mary"),
+      LichessFollowedPlayer(id: "aaron", username: "aaron", rapidRating: 797, online: false, url: "https://lichess.org/@/aaron")
+    ]
   }
 }
 

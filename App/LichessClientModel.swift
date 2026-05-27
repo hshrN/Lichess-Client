@@ -9,6 +9,8 @@ final class LichessClientModel {
   var isInGame = false
   var isSearching = false
   var challenges = LichessChallenge.samples
+  var following = LichessFollowedPlayer.samples
+  var playerSearchText = ""
   var events = LichessEvent.samples
   var selectedRoom = ChatRoom.player
   var draftMessage = ""
@@ -49,6 +51,47 @@ final class LichessClientModel {
         detail: "\(preset.title), \(preset.rated ? "rated" : "casual").",
         systemImage: "scope"
       ),
+      at: 0
+    )
+  }
+
+  func refreshFollowing() {
+    guard isConfigured else {
+      events.insert(
+        LichessEvent(title: "Token required", detail: "Add a token to load following.", systemImage: "key"),
+        at: 0
+      )
+      return
+    }
+
+    events.insert(
+      LichessEvent(title: "Following refresh queued", detail: "/api/rel/following", systemImage: "person.2"),
+      at: 0
+    )
+  }
+
+  func challenge(_ player: LichessFollowedPlayer, preset: SeekPreset = SeekPreset.defaults[0]) {
+    guard isConfigured else {
+      events.insert(
+        LichessEvent(title: "Token required", detail: "Add a token before challenging \(player.username).", systemImage: "key"),
+        at: 0
+      )
+      return
+    }
+
+    challenges.insert(
+      LichessChallenge(
+        id: UUID().uuidString,
+        opponent: player.username,
+        rating: player.rapidRating ?? 1500,
+        control: preset.title,
+        rated: preset.rated,
+        status: .pending
+      ),
+      at: 0
+    )
+    events.insert(
+      LichessEvent(title: "Challenge queued", detail: "\(player.username), \(preset.title)", systemImage: "paperplane"),
       at: 0
     )
   }

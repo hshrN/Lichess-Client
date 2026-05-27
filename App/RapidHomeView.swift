@@ -71,6 +71,8 @@ struct RapidHomeView: View {
         }
       }
 
+      FollowingChallengeView(model: model, showSettings: showSettings)
+
       EventFeedCompactView(events: model.events)
     }
   }

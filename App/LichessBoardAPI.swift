@@ -25,25 +25,37 @@ struct LichessBoardAPI {
     var request = authenticatedRequest(path: "/api/board/seek")
     request.httpMethod = "POST"
     request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    request.httpBody = formBody(for: seekItems(preset: preset))
+    return request
+  }
 
-    var items = [
-      URLQueryItem(name: "rated", value: preset.rated ? "true" : "false"),
-      URLQueryItem(name: "variant", value: "standard"),
-      URLQueryItem(name: "color", value: preset.color.rawValue)
-    ]
+  func followingRequest() -> URLRequest {
+    authenticatedRequest(path: "/api/rel/following")
+  }
 
-    if let time = preset.time, let increment = preset.increment {
-      items.append(URLQueryItem(name: "time", value: "\(time)"))
-      items.append(URLQueryItem(name: "increment", value: "\(increment)"))
-    }
+  func challengesRequest() -> URLRequest {
+    var request = authenticatedRequest(path: "/api/challenge")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    return request
+  }
 
-    if let days = preset.days {
-      items.append(URLQueryItem(name: "days", value: "\(days)"))
-    }
+  func challengeRequest(username: String, preset: SeekPreset) -> URLRequest {
+    var request = authenticatedRequest(path: "/api/challenge/\(username)")
+    request.httpMethod = "POST"
+    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.httpBody = formBody(for: challengeItems(preset: preset))
+    return request
+  }
 
-    var body = URLComponents()
-    body.queryItems = items
-    request.httpBody = body.percentEncodedQuery?.data(using: String.Encoding.utf8)
+  func acceptChallengeRequest(challengeId: String) -> URLRequest {
+    postRequest(path: "/api/challenge/\(challengeId)/accept")
+  }
+
+  func declineChallengeRequest(challengeId: String, reason: ChallengeDeclineReason = .generic) -> URLRequest {
+    var request = postRequest(path: "/api/challenge/\(challengeId)/decline")
+    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    request.httpBody = formBody(for: [URLQueryItem(name: "reason", value: reason.rawValue)])
     return request
   }
 
@@ -54,7 +66,58 @@ struct LichessBoardAPI {
     return request
   }
 
+  private func postRequest(path: String) -> URLRequest {
+    var request = authenticatedRequest(path: path)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    return request
+  }
+
   private func applyAuth(to request: inout URLRequest) {
     request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+  }
+
+  private func seekItems(preset: SeekPreset) -> [URLQueryItem] {
+    var items = commonChallengeItems(preset: preset)
+
+    if let time = preset.time, let increment = preset.increment {
+      items.append(URLQueryItem(name: "time", value: "\(time)"))
+      items.append(URLQueryItem(name: "increment", value: "\(increment)"))
+    }
+
+    if let days = preset.days {
+      items.append(URLQueryItem(name: "days", value: "\(days)"))
+    }
+
+    return items
+  }
+
+  private func challengeItems(preset: SeekPreset) -> [URLQueryItem] {
+    var items = commonChallengeItems(preset: preset)
+
+    if let time = preset.time, let increment = preset.increment {
+      items.append(URLQueryItem(name: "clock.limit", value: "\(time * 60)"))
+      items.append(URLQueryItem(name: "clock.increment", value: "\(increment)"))
+    }
+
+    if let days = preset.days {
+      items.append(URLQueryItem(name: "days", value: "\(days)"))
+    }
+
+    return items
+  }
+
+  private func commonChallengeItems(preset: SeekPreset) -> [URLQueryItem] {
+    [
+      URLQueryItem(name: "rated", value: preset.rated ? "true" : "false"),
+      URLQueryItem(name: "variant", value: "standard"),
+      URLQueryItem(name: "color", value: preset.color.rawValue)
+    ]
+  }
+
+  private func formBody(for items: [URLQueryItem]) -> Data? {
+    var body = URLComponents()
+    body.queryItems = items
+    return body.percentEncodedQuery?.data(using: String.Encoding.utf8)
   }
 }
