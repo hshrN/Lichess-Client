@@ -28,7 +28,7 @@ The app now uses Lichess OAuth instead of manual token entry.
 - Authorization endpoint: `https://lichess.org/oauth`
 - Token endpoint: `https://lichess.org/api/token`
 - Flow: authorization code with PKCE (`S256`)
-- Redirect URI: `lichessboardauth://oauth-callback`
+- Redirect URI: `app.bitrig.new.f3424c4c-db54-418d-aa5d-426ff1c3f9a7://oauth-callback`
 - Scopes currently requested: `board:play`, `challenge:read`, `challenge:write`
 
 This follows the public-client guidance used by the official Lichess API demo app.

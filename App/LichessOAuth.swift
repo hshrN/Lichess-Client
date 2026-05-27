@@ -33,8 +33,8 @@ enum LichessOAuthError: LocalizedError {
 
 enum LichessOAuth {
   static let host = URL(string: "https://lichess.org")!
-  static let clientID = "lichess-board-ios"
-  static let callbackScheme = "lichessboardauth"
+  static let clientID = Bundle.main.bundleIdentifier ?? "app.bitrig.lichess-board"
+  static let callbackScheme = Bundle.main.bundleIdentifier ?? "app.bitrig.lichess-board"
   static let redirectURI = "\(callbackScheme)://oauth-callback"
   static let scopes = ["board:play", "challenge:read", "challenge:write"]
 

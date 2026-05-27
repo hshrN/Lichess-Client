@@ -31,7 +31,7 @@
               "CFBundleTypeRole": "Editor",
               "CFBundleURLName": "Lichess OAuth",
               "CFBundleURLSchemes": [
-                "lichessboardauth"
+                "app.bitrig.new.f3424c4c-db54-418d-aa5d-426ff1c3f9a7"
               ]
             }
           ],
