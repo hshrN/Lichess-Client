@@ -17,7 +17,6 @@ final class LichessClientModel {
   var onlineBots = LichessBotPlayer.samples
   var playerSearchText = ""
   var selectedSeekPreset = SeekPreset.defaults[0]
-  var selectedBotLevel = BotLevelOption(level: 3)
   var events = LichessEvent.samples
   var selectedRoom = ChatRoom.player
   var draftMessage = ""
@@ -186,27 +185,6 @@ final class LichessClientModel {
     )
   }
 
-  func challengeAI(preset: SeekPreset? = nil) {
-    guard isConfigured else {
-      events.insert(
-        LichessEvent(title: "Token required", detail: "Add a token before challenging Lichess AI.", systemImage: "key"),
-        at: 0
-      )
-      return
-    }
-
-    let chosenPreset = preset ?? selectedSeekPreset
-    isSearching = true
-    events.insert(
-      LichessEvent(
-        title: "AI challenge queued",
-        detail: "\(chosenPreset.title), \(selectedBotLevel.title)",
-        systemImage: "brain"
-      ),
-      at: 0
-    )
-  }
-
   func challengeBot(_ bot: LichessBotPlayer, preset: SeekPreset? = nil) {
     guard isConfigured else {
       events.insert(
@@ -232,10 +210,6 @@ final class LichessClientModel {
       LichessEvent(title: "Bot challenge queued", detail: "\(bot.username), \(chosenPreset.title)", systemImage: "cpu"),
       at: 0
     )
-  }
-
-  func selectBotLevel(_ option: BotLevelOption) {
-    selectedBotLevel = option
   }
 
   func openPreviewGame() {

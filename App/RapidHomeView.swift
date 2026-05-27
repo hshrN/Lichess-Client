@@ -205,59 +205,16 @@ private struct BotPlayPanel: View {
         .font(.caption.weight(.semibold))
       }
 
-      VStack(alignment: .leading, spacing: 10) {
-        Text("Lichess AI")
-          .font(.subheadline.weight(.semibold))
-
-        ScrollView(.horizontal, showsIndicators: false) {
-          HStack(spacing: 8) {
-            ForEach(BotLevelOption.all) { option in
-              Button {
-                model.selectBotLevel(option)
-              } label: {
-                Text("\(option.level)")
-                  .font(.subheadline.weight(.semibold))
-                  .frame(width: 38, height: 38)
-                  .background(
-                    model.selectedBotLevel == option ? Color.accentColor.opacity(0.18) : Color(.tertiarySystemGroupedBackground),
-                    in: .circle
-                  )
-              }
-              .buttonStyle(.plain)
-            }
-          }
-        }
-
-        Button {
-          if model.isConfigured {
-            model.challengeAI()
-          } else {
-            showSettings()
-          }
-        } label: {
-          HStack {
-            VStack(alignment: .leading, spacing: 2) {
-              Text("Play \(model.selectedBotLevel.title)")
-                .font(.subheadline.weight(.semibold))
-              Text(model.selectedSeekPreset.title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName: "play.fill")
-              .foregroundStyle(.tint)
-          }
-          .padding(12)
-          .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-      }
+      Text("Challenge online bot accounts directly. The public Lichess API does not expose a normal client flow for launching the built-in AI here.")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
 
       VStack(alignment: .leading, spacing: 10) {
         Text("Online Bots")
           .font(.subheadline.weight(.semibold))
 
-        ForEach(model.onlineBots.filter { $0.title == "BOT" }.prefix(3)) { bot in
+        ForEach(model.onlineBots.prefix(3)) { bot in
           HStack(spacing: 12) {
             Circle()
               .fill(bot.online ? Color.green : Color.secondary.opacity(0.35))

@@ -120,7 +120,6 @@ struct LichessBotPlayer: Identifiable {
 
   static var samples: [LichessBotPlayer] {
     [
-      LichessBotPlayer(id: "lichess-ai-level-5", username: "Lichess AI", rating: nil, online: true, title: "AI"),
       LichessBotPlayer(id: "maia5", username: "maia5", rating: 1860, online: true, title: "BOT"),
       LichessBotPlayer(id: "bot950", username: "bot950", rating: 950, online: true, title: "BOT")
     ]
@@ -233,18 +232,6 @@ struct SeekPreset: Identifiable {
   }
 }
 
-struct BotLevelOption: Identifiable, Hashable {
-  var level: Int
-  var id: Int { level }
-
-  var title: String {
-    "Level \(level)"
-  }
-
-  static var all: [BotLevelOption] {
-    (1...8).map { BotLevelOption(level: $0) }
-  }
-}
 
 struct BoardSquare: Hashable {
   var file: Int

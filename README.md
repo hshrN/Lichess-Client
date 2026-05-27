@@ -10,7 +10,7 @@ The app currently includes:
 - A tappable board UI that stages UCI moves.
 - Rapid-only seek presets that map to Lichess Board API seeks.
 - Following list and direct challenge UI for players the user follows.
-- Bot play panel for Lichess AI and online bot challenges.
+- Bot play panel for challenging online bot accounts.
 - Challenge inbox preview for incoming/outgoing challenge state.
 - A board screen that appears only after a search/game starts.
 - Player and spectator chat UI.
@@ -86,7 +86,6 @@ Primary endpoints planned for the app:
 - `GET /api/rel/following`
 - `GET /api/challenge`
 - `POST /api/challenge/{username}`
-- `POST /api/challenge/ai`
 - `POST /api/challenge/{challengeId}/accept`
 - `POST /api/challenge/{challengeId}/decline`
 - `GET /api/bot/online`
@@ -140,7 +139,7 @@ The current implementation is split into:
 - `LichessModels`: strongly typed app models and enums.
 - `LichessBoardAPI`: authenticated URL request construction for Board API calls.
 - Challenge/following request builders for `GET /api/rel/following`, `GET /api/challenge`, direct challenge creation, accept, and decline.
-- Bot-play request builders for `POST /api/challenge/ai` and `GET /api/bot/online`.
+- Bot-play request builders for `GET /api/bot/online` and direct bot challenges through `POST /api/challenge/{username}`.
 - SwiftUI screen files for the board, pairing, challenges, settings, and header.
 
 Recommended next architectural additions:
@@ -160,7 +159,7 @@ Recommended next architectural additions:
 5. Submit moves through `POST /api/board/game/{gameId}/move/{move}`.
 6. Parse `GET /api/rel/following` NDJSON into the challenge list.
 7. Wire direct challenges with `POST /api/challenge/{username}`.
-8. Wire bot play through `POST /api/challenge/ai` and online bot listings.
+8. Wire bot play through online bot listings and direct challenges.
 9. Wire chat, resign, abort, draw, takeback, and claim actions.
 10. Add resilient stream reconnect behavior and clear user-facing error states.
 11. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
