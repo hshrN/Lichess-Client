@@ -2,12 +2,24 @@ import Foundation
 import ChessKit
 
 @Observable
+@MainActor
 final class LichessClientModel {
-  var accessToken = ""
+  var accessToken = UserDefaults.standard.string(forKey: "lichessAccessToken") ?? "" {
+    didSet {
+      UserDefaults.standard.set(accessToken, forKey: "lichessAccessToken")
+    }
+  }
+  var accountUsername = UserDefaults.standard.string(forKey: "lichessUsername") ?? "" {
+    didSet {
+      UserDefaults.standard.set(accountUsername, forKey: "lichessUsername")
+    }
+  }
   var streamState = StreamConnectionState.disconnected
   var activeGame = LichessGame.sample
   var isInGame = false
   var isSearching = false
+  var isAuthenticating = false
+  var authError: String?
   var challenges = LichessChallenge.samples
   var following = LichessFollowedPlayer.samples
   var onlineBots = LichessBotPlayer.samples
@@ -22,6 +34,60 @@ final class LichessClientModel {
 
   var isConfigured: Bool {
     !accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+
+  var accountLabel: String {
+    accountUsername.isEmpty ? "Not signed in" : accountUsername
+  }
+
+  func signIn() async {
+    guard !isAuthenticating else {
+      return
+    }
+
+    isAuthenticating = true
+    authError = nil
+
+    do {
+      let session = try await LichessOAuth.signIn()
+      accessToken = session.accessToken
+      accountUsername = session.username
+      streamState = .connected
+      events.insert(
+        LichessEvent(title: "Signed in", detail: session.username, systemImage: "person.crop.circle.badge.checkmark"),
+        at: 0
+      )
+    } catch {
+      authError = error.localizedDescription
+      events.insert(
+        LichessEvent(title: "Sign-in failed", detail: error.localizedDescription, systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+    }
+
+    isAuthenticating = false
+  }
+
+  func signOut() async {
+    authError = nil
+    let token = accessToken
+
+    do {
+      if !token.isEmpty {
+        try await LichessOAuth.revoke(token: token)
+      }
+    } catch {
+      authError = error.localizedDescription
+    }
+
+    accessToken = ""
+    accountUsername = ""
+    streamState = .disconnected
+    isSearching = false
+    events.insert(
+      LichessEvent(title: "Signed out", detail: "Lichess authorization removed.", systemImage: "person.crop.circle.badge.xmark"),
+      at: 0
+    )
   }
 
   func refreshMockStream() {

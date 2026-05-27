@@ -26,6 +26,15 @@
           "CFBundleDisplayName": "Lichess Board",
           "CFBundleShortVersionString": "1.0",
           "CFBundleVersion": "1",
+          "CFBundleURLTypes": [
+            {
+              "CFBundleTypeRole": "Editor",
+              "CFBundleURLName": "Lichess OAuth",
+              "CFBundleURLSchemes": [
+                "lichessboardauth"
+              ]
+            }
+          ],
           "ITSAppUsesNonExemptEncryption": false,
           "UILaunchScreen": {},
           "UISupportedInterfaceOrientations": [

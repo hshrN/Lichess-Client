@@ -39,7 +39,7 @@ private struct HomeDashboardView: View {
         }
         .labelStyle(.iconOnly)
         .buttonStyle(.bordered)
-        .accessibilityLabel("Token settings")
+        .accessibilityLabel("Lichess account")
       }
 
       HStack(spacing: 10) {

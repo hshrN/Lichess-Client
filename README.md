@@ -6,7 +6,7 @@ Lichess Board is a minimal native iOS client for playing rapid Lichess games thr
 
 The app currently includes:
 
-- A richer iOS dashboard with play controls, following challenges, challenge inbox, activity, and token status.
+- A richer iOS dashboard with play controls, following challenges, challenge inbox, activity, and Lichess account status.
 - A tappable board UI that stages UCI moves.
 - Rapid-only seek presets that map to Lichess Board API seeks.
 - Following list and direct challenge UI for players the user follows.
@@ -14,12 +14,24 @@ The app currently includes:
 - Challenge inbox preview for incoming/outgoing challenge state.
 - A board screen that appears only after a search/game starts.
 - Player and spectator chat UI.
-- Token entry screen for future authenticated API calls.
+- Native Lichess OAuth sign-in using the authorization code flow with PKCE.
 - Appearance setting for System, Light, and Dark modes.
 - `THIRD_PARTY_NOTICES.md` for dependency license tracking.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
 
 Most UI actions currently update local preview state. Live networking is intentionally isolated behind the API layer so authentication, streaming, and state reconciliation can be added cleanly.
+
+## Authentication
+
+The app now uses Lichess OAuth instead of manual token entry.
+
+- Authorization endpoint: `https://lichess.org/oauth`
+- Token endpoint: `https://lichess.org/api/token`
+- Flow: authorization code with PKCE (`S256`)
+- Redirect URI: `lichessboardauth://oauth-callback`
+- Scopes currently requested: `board:play`, `challenge:read`, `challenge:write`
+
+This follows the public-client guidance used by the official Lichess API demo app.
 
 ## Lichess Board API Constraints
 
@@ -132,7 +144,7 @@ The current implementation is split into:
 
 Recommended next architectural additions:
 
-- `LichessAuthStore`: save and load API tokens from Keychain.
+- `LichessAuthStore`: move OAuth tokens from `UserDefaults` to Keychain.
 - `NDJSONStreamClient`: consume Lichess newline-delimited JSON streams using `URLSession`.
 - `LichessEventDecoder`: decode `gameStart`, `gameFinish`, challenge, `gameFull`, `gameState`, `chatLine`, and `opponentGone` events.
 - `GameStateReducer`: merge stream events into local board, clock, chat, and action state.
@@ -140,7 +152,7 @@ Recommended next architectural additions:
 
 ## Implementation Milestones
 
-1. Store the user API token securely in Keychain.
+1. Move the OAuth access token from `UserDefaults` to Keychain.
 2. Connect `GET /api/stream/event` and show incoming rapid games and challenges.
 3. Connect `GET /api/board/game/stream/{gameId}` and reconcile `gameFull` plus `gameState`.
 4. Replace the static board pieces with a FEN/move-derived board model.
@@ -169,7 +181,7 @@ Post-game review can be considered later only if it is clearly separated from ac
 ## Manual QA Checklist
 
 - Launches on iPhone without layout clipping.
-- Token field accepts and hides input.
+- Lichess sign-in opens OAuth and returns to the app.
 - Appearance picker switches between System, Light, and Dark.
 - Home screen starts with Play, not a chessboard.
 - Board taps stage a UCI move after entering a game.

@@ -38,11 +38,11 @@ struct ContentView: View {
           .labelStyle(.iconOnly)
           .accessibilityLabel("Refresh stream")
 
-          Button("Token", systemImage: "key") {
+          Button("Account", systemImage: model.isConfigured ? "person.crop.circle.fill.badge.checkmark" : "person.crop.circle") {
             showingSettings = true
           }
           .labelStyle(.iconOnly)
-          .accessibilityLabel("Token settings")
+          .accessibilityLabel("Lichess account")
         }
       }
       .sheet(isPresented: $showingSettings) {
@@ -50,7 +50,7 @@ struct ContentView: View {
           ConnectionSettingsView(model: model)
             .padding()
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Lichess Token")
+            .navigationTitle("Lichess Account")
             .toolbar {
               ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") {
