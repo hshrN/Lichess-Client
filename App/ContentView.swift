@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+  @AppStorage("appearanceMode") private var appearanceModeRaw = AppearanceMode.system.rawValue
   @State private var model = LichessClientModel()
   @State private var showingSettings = false
 
@@ -59,6 +60,15 @@ struct ContentView: View {
             }
         }
       }
+      .preferredColorScheme(preferredColorScheme)
+    }
+  }
+
+  private var preferredColorScheme: ColorScheme? {
+    switch AppearanceMode(rawValue: appearanceModeRaw) ?? .system {
+    case .system: nil
+    case .light: .light
+    case .dark: .dark
     }
   }
 }

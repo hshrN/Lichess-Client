@@ -46,6 +46,7 @@ private struct ClockCard: View {
 }
 
 private struct ChessBoardView: View {
+  @Environment(\.colorScheme) private var colorScheme
   @Bindable var model: LichessClientModel
 
   private let pieces = [
@@ -98,7 +99,11 @@ private struct ChessBoardView: View {
   }
 
   private func squareColor(row: Int, column: Int) -> Color {
-    (row + column).isMultiple(of: 2) ? Color(red: 0.91, green: 0.87, blue: 0.76) : Color(red: 0.36, green: 0.53, blue: 0.39)
+    if colorScheme == .dark {
+      return (row + column).isMultiple(of: 2) ? Color(red: 0.43, green: 0.45, blue: 0.39) : Color(red: 0.18, green: 0.31, blue: 0.22)
+    }
+
+    return (row + column).isMultiple(of: 2) ? Color(red: 0.91, green: 0.87, blue: 0.76) : Color(red: 0.36, green: 0.53, blue: 0.39)
   }
 
   private func pieceSymbol(_ piece: String) -> String {

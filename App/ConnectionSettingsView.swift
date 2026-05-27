@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ConnectionSettingsView: View {
+  @AppStorage("appearanceMode") private var appearanceModeRaw = AppearanceMode.system.rawValue
   @Bindable var model: LichessClientModel
 
   var body: some View {
@@ -22,6 +23,15 @@ struct ConnectionSettingsView: View {
         model.refreshMockStream()
       }
       .buttonStyle(.borderedProminent)
+
+      Divider()
+
+      Picker("Appearance", selection: $appearanceModeRaw) {
+        ForEach(AppearanceMode.allCases) { mode in
+          Text(mode.title).tag(mode.rawValue)
+        }
+      }
+      .pickerStyle(.segmented)
     }
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)

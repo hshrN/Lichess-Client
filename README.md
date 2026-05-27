@@ -12,6 +12,7 @@ The app currently includes:
 - A board screen that appears only after a search/game starts.
 - Player and spectator chat UI.
 - Token entry screen for future authenticated API calls.
+- Appearance setting for System, Light, and Dark modes.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
 
 Most UI actions currently update local preview state. Live networking is intentionally isolated behind the API layer so authentication, streaming, and state reconciliation can be added cleanly.
@@ -81,6 +82,7 @@ Post-game review can be considered later only if it is clearly separated from ac
 
 - Launches on iPhone without layout clipping.
 - Token field accepts and hides input.
+- Appearance picker switches between System, Light, and Dark.
 - Home screen starts with Play, not a chessboard.
 - Board taps stage a UCI move after entering a game.
 - Rapid seek preset buttons add seek events.
