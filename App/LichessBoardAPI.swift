@@ -48,6 +48,26 @@ struct LichessBoardAPI {
     return request
   }
 
+  func challengeAIRequest(level: Int, preset: SeekPreset) -> URLRequest {
+    var request = authenticatedRequest(path: "/api/challenge/ai")
+    request.httpMethod = "POST"
+    request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    var items = challengeItems(preset: preset)
+    items.append(URLQueryItem(name: "level", value: "\(level)"))
+    request.httpBody = formBody(for: items)
+    return request
+  }
+
+  func onlineBotsRequest(limit: Int = 20) -> URLRequest {
+    var components = URLComponents(url: baseURL.appending(path: "/api/bot/online"), resolvingAgainstBaseURL: false)!
+    components.queryItems = [URLQueryItem(name: "nb", value: "\(limit)")]
+    var request = URLRequest(url: components.url!)
+    request.setValue("application/x-ndjson", forHTTPHeaderField: "Accept")
+    applyAuth(to: &request)
+    return request
+  }
+
   func acceptChallengeRequest(challengeId: String) -> URLRequest {
     postRequest(path: "/api/challenge/\(challengeId)/accept")
   }

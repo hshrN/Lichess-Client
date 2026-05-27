@@ -8,6 +8,7 @@ struct RapidHomeView: View {
     VStack(spacing: 20) {
       HomeDashboardView(model: model, showSettings: showSettings)
       PlayControlPanel(model: model, showSettings: showSettings)
+      BotPlayPanel(model: model, showSettings: showSettings)
       FollowingChallengeView(model: model, showSettings: showSettings)
       ChallengeInboxPanel(model: model)
       EventFeedCompactView(events: model.events)
@@ -177,6 +178,114 @@ private struct ChallengeInboxPanel: View {
         }
         .padding(12)
         .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+      }
+    }
+    .padding(16)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
+  }
+}
+
+private struct BotPlayPanel: View {
+  @Bindable var model: LichessClientModel
+  var showSettings: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack {
+        Label("Bot Play", systemImage: "cpu")
+          .font(.headline)
+        Spacer()
+        Button("Refresh", systemImage: "arrow.clockwise") {
+          if model.isConfigured {
+            model.refreshOnlineBots()
+          } else {
+            showSettings()
+          }
+        }
+        .font(.caption.weight(.semibold))
+      }
+
+      VStack(alignment: .leading, spacing: 10) {
+        Text("Lichess AI")
+          .font(.subheadline.weight(.semibold))
+
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 8) {
+            ForEach(BotLevelOption.all) { option in
+              Button {
+                model.selectBotLevel(option)
+              } label: {
+                Text("\(option.level)")
+                  .font(.subheadline.weight(.semibold))
+                  .frame(width: 38, height: 38)
+                  .background(
+                    model.selectedBotLevel == option ? Color.accentColor.opacity(0.18) : Color(.tertiarySystemGroupedBackground),
+                    in: .circle
+                  )
+              }
+              .buttonStyle(.plain)
+            }
+          }
+        }
+
+        Button {
+          if model.isConfigured {
+            model.challengeAI()
+          } else {
+            showSettings()
+          }
+        } label: {
+          HStack {
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Play \(model.selectedBotLevel.title)")
+                .font(.subheadline.weight(.semibold))
+              Text(model.selectedSeekPreset.title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "play.fill")
+              .foregroundStyle(.tint)
+          }
+          .padding(12)
+          .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+      }
+
+      VStack(alignment: .leading, spacing: 10) {
+        Text("Online Bots")
+          .font(.subheadline.weight(.semibold))
+
+        ForEach(model.onlineBots.filter { $0.title == "BOT" }.prefix(3)) { bot in
+          HStack(spacing: 12) {
+            Circle()
+              .fill(bot.online ? Color.green : Color.secondary.opacity(0.35))
+              .frame(width: 9, height: 9)
+
+            VStack(alignment: .leading, spacing: 2) {
+              Text(bot.username)
+                .font(.subheadline.weight(.semibold))
+              Text(bot.rating.map { "\(bot.title) \($0)" } ?? bot.title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button("Challenge", systemImage: "paperplane.fill") {
+              if model.isConfigured {
+                model.challengeBot(bot)
+              } else {
+                showSettings()
+              }
+            }
+            .font(.caption.weight(.semibold))
+            .buttonStyle(.bordered)
+          }
+          .padding(12)
+          .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+        }
       }
     }
     .padding(16)
