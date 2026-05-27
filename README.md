@@ -13,6 +13,7 @@ The app currently includes:
 - Player and spectator chat UI.
 - Token entry screen for future authenticated API calls.
 - Appearance setting for System, Light, and Dark modes.
+- `THIRD_PARTY_NOTICES.md` for dependency license tracking.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
 
 Most UI actions currently update local preview state. Live networking is intentionally isolated behind the API layer so authentication, streaming, and state reconciliation can be added cleanly.
@@ -48,6 +49,8 @@ Reference pages:
 - https://lichess.org/page/api-tips
 - https://lichess-org.github.io/api/
 
+Dependency notices are tracked in `THIRD_PARTY_NOTICES.md`.
+
 ## Lichess Board API Scope
 
 Primary endpoints planned for the app:
@@ -77,6 +80,7 @@ Recommended option:
 - URL: https://github.com/chesskit-app/chesskit-swift
 - Swift Package Manager compatible.
 - MIT license.
+- Distribution allowed, including commercial distribution, as long as the MIT copyright and permission notice are included with substantial copies of the software.
 - Swift-native.
 - Supports board representation, legal move validation, making moves, FEN parsing, PGN parsing, SAN parsing, promotion, castling, en passant, check, stalemate, checkmate, and draws.
 - Does not require bundling Stockfish or an evaluation engine.
@@ -98,10 +102,10 @@ UI-adjacent option:
 
 Recommended path:
 
-1. Add `chesskit-app/chesskit-swift`.
-2. Replace the current static board array with a `ChessKit` position initialized from Lichess `initialFen`.
+1. Add `chesskit-app/chesskit-swift`. Done.
+2. Replace the current static board array with a `ChessKit` position initialized from Lichess `initialFen`. Started with a standard `Board()`.
 3. Replay Lichess UCI moves from `gameState.moves`.
-4. Use legal moves only to drive tap targets and reject impossible input.
+4. Use legal moves only to drive tap targets and reject impossible input. Started.
 5. Send the selected legal move to Lichess as UCI.
 6. Never expose engine evaluation, best-move ranking, opening-book help, or analysis during active games.
 

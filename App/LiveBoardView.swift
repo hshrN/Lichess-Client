@@ -49,23 +49,13 @@ private struct ChessBoardView: View {
   @Environment(\.colorScheme) private var colorScheme
   @Bindable var model: LichessClientModel
 
-  private let pieces = [
-    ["r", "n", "b", "q", "k", "b", "n", "r"],
-    ["p", "p", "p", "p", "p", "p", "p", "p"],
-    ["", "", "", "", "", "", "", ""],
-    ["", "", "", "", "", "", "", ""],
-    ["", "", "", "", "", "", "", ""],
-    ["", "", "", "", "", "", "", ""],
-    ["P", "P", "P", "P", "P", "P", "P", "P"],
-    ["R", "N", "B", "Q", "K", "B", "N", "R"]
-  ]
-
   var body: some View {
     VStack(spacing: 0) {
       ForEach(0..<8, id: \.self) { row in
         HStack(spacing: 0) {
           ForEach(0..<8, id: \.self) { column in
             let square = BoardSquare(file: column, rank: 7 - row)
+            let isLegalDestination = model.selectedSquare.map { model.legalDestinations(for: $0).contains(square) } ?? false
             Button {
               withAnimation(.snappy) {
                 model.playMove(to: square)
@@ -79,7 +69,12 @@ private struct ChessBoardView: View {
                     .stroke(.tint, lineWidth: 4)
                     .padding(8)
                 }
-                Text(pieceSymbol(pieces[row][column]))
+                if isLegalDestination {
+                  Circle()
+                    .fill(.tint.opacity(0.34))
+                    .frame(width: 18, height: 18)
+                }
+                Text(model.pieceSymbol(at: square) ?? "")
                   .font(.system(size: 28, weight: .semibold))
                   .minimumScaleFactor(0.7)
               }
@@ -104,24 +99,6 @@ private struct ChessBoardView: View {
     }
 
     return (row + column).isMultiple(of: 2) ? Color(red: 0.91, green: 0.87, blue: 0.76) : Color(red: 0.36, green: 0.53, blue: 0.39)
-  }
-
-  private func pieceSymbol(_ piece: String) -> String {
-    switch piece {
-    case "K": "♔"
-    case "Q": "♕"
-    case "R": "♖"
-    case "B": "♗"
-    case "N": "♘"
-    case "P": "♙"
-    case "k": "♚"
-    case "q": "♛"
-    case "r": "♜"
-    case "b": "♝"
-    case "n": "♞"
-    case "p": "♟"
-    default: ""
-    }
   }
 }
 

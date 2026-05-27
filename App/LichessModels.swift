@@ -120,8 +120,8 @@ struct LichessGame {
       whiteTime: "15:00",
       blackTime: "15:00",
       isMyTurn: true,
-      lastMove: "d2d3",
-      moves: ["d2d3"],
+      lastMove: "",
+      moves: [],
       chat: [
         ChatLine(user: "lichess", text: "Good luck, have fun.", room: .player),
         ChatLine(user: "mary", text: "Hi!", room: .player)

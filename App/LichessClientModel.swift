@@ -1,4 +1,5 @@
 import Foundation
+import ChessKit
 
 @Observable
 final class LichessClientModel {
@@ -12,6 +13,7 @@ final class LichessClientModel {
   var selectedRoom = ChatRoom.player
   var draftMessage = ""
   var selectedSquare: BoardSquare?
+  var board = Board()
 
   var isConfigured: Bool {
     !accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -81,7 +83,9 @@ final class LichessClientModel {
 
   func playMove(to square: BoardSquare) {
     guard let selectedSquare else {
-      selectedSquare = square
+      if pieceSymbol(at: square) != nil {
+        self.selectedSquare = square
+      }
       return
     }
 
@@ -91,6 +95,17 @@ final class LichessClientModel {
       return
     }
 
+    let start = Square(selectedSquare.uci)
+    let end = Square(square.uci)
+    guard board.canMove(pieceAt: start, to: end) else {
+      events.insert(
+        LichessEvent(title: "Illegal move", detail: "\(selectedSquare.uci)\(square.uci)", systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+      return
+    }
+
+    board.move(pieceAt: start, to: end)
     let move = "\(selectedSquare.uci)\(square.uci)"
     activeGame.lastMove = move
     activeGame.moves.append(move)
@@ -99,6 +114,35 @@ final class LichessClientModel {
       LichessEvent(title: "Move staged", detail: move, systemImage: "arrow.up.right.square")
       , at: 0
     )
+  }
+
+  func legalDestinations(for square: BoardSquare) -> Set<BoardSquare> {
+    Set(
+      board.legalMoves(forPieceAt: Square(square.uci)).map {
+        BoardSquare(file: $0.file.number - 1, rank: $0.rank.value - 1)
+      }
+    )
+  }
+
+  func pieceSymbol(at square: BoardSquare) -> String? {
+    guard let piece = board.position.piece(at: Square(square.uci)) else {
+      return nil
+    }
+
+    return switch (piece.color, piece.kind) {
+    case (.white, .king): "♔"
+    case (.white, .queen): "♕"
+    case (.white, .rook): "♖"
+    case (.white, .bishop): "♗"
+    case (.white, .knight): "♘"
+    case (.white, .pawn): "♙"
+    case (.black, .king): "♚"
+    case (.black, .queen): "♛"
+    case (.black, .rook): "♜"
+    case (.black, .bishop): "♝"
+    case (.black, .knight): "♞"
+    case (.black, .pawn): "♟"
+    }
   }
 
   func sendChat() {

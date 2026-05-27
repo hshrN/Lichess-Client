@@ -8,6 +8,12 @@
     "groupSortPosition": "bottom",
     "transitivelyLinkDependencies": false
   },
+  "packages": {
+    "ChessKit": {
+      "url": "https:\/\/github.com\/chesskit-app\/chesskit-swift.git",
+      "from": "0.17.0"
+    }
+  },
   "settings": {
     "CODE_SIGN_IDENTITY": "-"
   },
@@ -31,6 +37,11 @@
         }
       },
       "platform": "iOS",
+      "dependencies": [
+        {
+          "package": "ChessKit"
+        }
+      ],
       "settings": {
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
