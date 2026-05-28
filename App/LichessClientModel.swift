@@ -551,6 +551,26 @@ final class LichessClientModel {
     submitGameAction(title: "Abort", icon: "stop.circle", request: api.abortRequest(gameId: activeGame.id))
   }
 
+  func offerDraw() {
+    submitGameAction(title: "Draw offer", icon: "equal.circle", request: api.drawRequest(gameId: activeGame.id, accept: true))
+  }
+
+  func requestTakeback() {
+    submitGameAction(title: "Takeback", icon: "arrow.uturn.backward.circle", request: api.takebackRequest(gameId: activeGame.id, accept: true))
+  }
+
+  func claimVictory() {
+    submitGameAction(title: "Claim victory", icon: "crown", request: api.claimVictoryRequest(gameId: activeGame.id))
+  }
+
+  func claimDraw() {
+    submitGameAction(title: "Claim draw", icon: "equal.square", request: api.claimDrawRequest(gameId: activeGame.id))
+  }
+
+  func berserk() {
+    submitGameAction(title: "Berserk", icon: "bolt", request: api.berserkRequest(gameId: activeGame.id))
+  }
+
   private func updateChallenge(_ challenge: LichessChallenge, status: ChallengeStatus) {
     guard let index = challenges.firstIndex(where: { $0.id == challenge.id }) else {
       return

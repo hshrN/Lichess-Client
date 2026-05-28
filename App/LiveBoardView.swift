@@ -77,13 +77,35 @@ private struct MoveControlsView: View {
       .buttonStyle(.bordered)
       .disabled(model.isSubmittingGameAction)
 
-      Button("Draw", systemImage: "equal.circle") {}
-        .buttonStyle(.bordered)
+      Button("Draw", systemImage: "equal.circle") {
+        model.offerDraw()
+      }
+      .buttonStyle(.bordered)
+      .disabled(model.isSubmittingGameAction)
 
       Button("Resign", systemImage: "flag") {
         model.resign()
       }
       .buttonStyle(.borderedProminent)
+      .disabled(model.isSubmittingGameAction)
+
+      Menu {
+        Button("Takeback", systemImage: "arrow.uturn.backward.circle") {
+          model.requestTakeback()
+        }
+        Button("Claim Victory", systemImage: "crown") {
+          model.claimVictory()
+        }
+        Button("Claim Draw", systemImage: "equal.square") {
+          model.claimDraw()
+        }
+        Button("Berserk", systemImage: "bolt") {
+          model.berserk()
+        }
+      } label: {
+        Label("More", systemImage: "ellipsis")
+      }
+      .buttonStyle(.bordered)
       .disabled(model.isSubmittingGameAction)
     }
     .frame(maxWidth: .infinity)

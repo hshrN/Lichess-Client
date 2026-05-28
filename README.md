@@ -36,7 +36,7 @@ The app now has a mixed state:
 - Game-state updates preserve the `gameFull.initialFen` when replaying later `gameState` move lists.
 - Live move submission
 - Live chat submission
-- Live abort and resign actions
+- Live abort, resign, draw offer, takeback request, claim victory, claim draw, and berserk actions
 - Request builders for draw offers, takeback offers, claim victory, claim draw, and berserk.
 - Seek timeout after 90 seconds if no public match is found
 - Challenge declined/canceled handling from the Lichess event stream
@@ -217,7 +217,7 @@ These tests intentionally do not call the live Lichess API. Live pairing, bot ch
 
 ## Implementation Milestones
 
-1. Add draw, takeback, claim, and berserk actions to the live game UI. Request builders are ready.
+1. Add draw, takeback, claim, and berserk actions to the live game UI. Done for action submission; offer-state UI can be improved later.
 2. Add promotion choice UI instead of defaulting promotions to queen.
 3. Improve seek/challenge UX so pending bot and public match flows are clearer and more actionable.
 4. Improve event/game stream reconnect behavior and cancellation semantics.
