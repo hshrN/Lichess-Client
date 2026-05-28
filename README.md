@@ -34,6 +34,8 @@ The app now has a mixed state:
 - Seek timeout after 90 seconds if no public match is found
 - Challenge declined/canceled handling from the Lichess event stream
 - Board interaction is gated until `gameFull` has loaded and the live board state is ready
+- Public seek now force-refreshes the event stream before posting the seek, so `gameStart` events are less likely to be missed
+- Public seek omits `color` when the selected color is random, matching Lichess guidance to leave it empty
 
 Some flows are still incomplete, especially draw/takeback/claim actions, promotion choice UI, stronger seek/challenge UX, and robust reconnect handling.
 
@@ -199,6 +201,7 @@ Post-game review can be considered later only if it is clearly separated from ac
 - Rapid seek preset buttons create real seek requests and can be canceled.
 - Public seeks stop after 90 seconds and show a failure event if no match is found.
 - Public seeks also report when the Lichess seek stream closes before a game starts.
+- Starting a public seek restarts the event stream first, then opens the seek stream.
 - Bot/following challenge buttons create real challenge requests.
 - Declined and canceled challenges update from the Lichess event stream.
 - A `gameStart` event opens the game screen.

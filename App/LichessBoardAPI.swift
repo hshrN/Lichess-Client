@@ -139,11 +139,16 @@ struct LichessBoardAPI {
   }
 
   private func commonChallengeItems(preset: SeekPreset) -> [URLQueryItem] {
-    [
+    var items = [
       URLQueryItem(name: "rated", value: preset.rated ? "true" : "false"),
-      URLQueryItem(name: "variant", value: "standard"),
-      URLQueryItem(name: "color", value: preset.color.rawValue)
+      URLQueryItem(name: "variant", value: "standard")
     ]
+
+    if preset.color != .random {
+      items.append(URLQueryItem(name: "color", value: preset.color.rawValue))
+    }
+
+    return items
   }
 
   private func formBody(for items: [URLQueryItem]) -> Data? {

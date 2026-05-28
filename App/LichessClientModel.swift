@@ -30,6 +30,7 @@ final class LichessClientModel {
   private var seekTask: Task<Void, Never>?
   private var gameStreamTask: Task<Void, Never>?
   private var seekTimeoutTask: Task<Void, Never>?
+  private var eventStreamRunID = UUID()
 
   init() {
     if let session = LichessAuthStore.loadSession() {
@@ -139,7 +140,8 @@ final class LichessClientModel {
     selectedSeekPreset = preset
     seekTask?.cancel()
     seekTimeoutTask?.cancel()
-    startEventStreamIfNeeded()
+    startEventStreamIfNeeded(forceRestart: true)
+    try? await Task.sleep(for: .milliseconds(500))
     isSearching = true
     streamState = .connected
     events.insert(
@@ -536,14 +538,28 @@ final class LichessClientModel {
     guard eventStreamTask == nil else { return }
 
     let request = api.eventStreamRequest()
+    let runID = UUID()
+    eventStreamRunID = runID
     eventStreamTask = Task { [weak self] in
       guard let self else { return }
+      defer {
+        Task { @MainActor in
+          if self.eventStreamRunID == runID {
+            self.eventStreamTask = nil
+          }
+        }
+      }
+
       do {
         let (bytes, response) = try await URLSession.shared.bytes(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
           await self.recordEvent(title: "Event stream failed", detail: "Lichess rejected the event stream.", icon: "exclamationmark.triangle")
           return
         }
+        await MainActor.run {
+          self.streamState = .connected
+        }
+        await self.recordEvent(title: "Event stream open", detail: "Waiting for game and challenge events.", icon: "antenna.radiowaves.left.and.right")
 
         for try await line in bytes.lines {
           guard !Task.isCancelled else { return }
@@ -571,23 +587,23 @@ final class LichessClientModel {
       streamState = .connected
       activeGame = LichessGame(
         id: event.game.gameId,
-        opponent: event.game.opponent.username,
-        opponentRating: event.game.opponent.rating,
+        opponent: event.game.opponent.username ?? event.game.opponent.id ?? "Opponent",
+        opponentRating: event.game.opponent.rating ?? 1500,
         myColor: event.game.color.capitalized,
         speed: event.game.speed.capitalized,
-        status: event.game.status.name,
-        whiteTime: formatSeconds(event.game.secondsLeft),
-        blackTime: formatSeconds(event.game.secondsLeft),
+        status: event.game.status?.name ?? "started",
+        whiteTime: formatSeconds(event.game.secondsLeft ?? 0),
+        blackTime: formatSeconds(event.game.secondsLeft ?? 0),
         isMyTurn: event.game.isMyTurn,
-        lastMove: event.game.lastMove,
-        moves: event.game.lastMove.isEmpty ? [] : [event.game.lastMove],
+        lastMove: event.game.lastMove ?? "",
+        moves: event.game.lastMove.map { $0.isEmpty ? [] : [$0] } ?? [],
         chat: []
       )
       isInGame = true
       hasLoadedGameState = false
       startGameStream(gameID: event.game.gameId)
       events.insert(
-        LichessEvent(title: "Game started", detail: "\(event.game.opponent.username) • \(event.game.speed.capitalized)", systemImage: "play.circle"),
+        LichessEvent(title: "Game started", detail: "\((event.game.opponent.username ?? event.game.opponent.id) ?? "Opponent") • \(event.game.speed.capitalized)", systemImage: "play.circle"),
         at: 0
       )
     case "challenge":
@@ -923,12 +939,12 @@ private struct GameFinishEvent: Decodable {
 private struct StartedGame: Decodable {
   var gameId: String
   var color: String
-  var lastMove: String
+  var lastMove: String?
   var speed: String
-  var status: Status
+  var status: Status?
   var opponent: Opponent
   var isMyTurn: Bool
-  var secondsLeft: Int
+  var secondsLeft: Int?
 }
 
 private struct FinishedGame: Decodable {
@@ -985,8 +1001,9 @@ private struct Status: Decodable {
 }
 
 private struct Opponent: Decodable {
-  var username: String
-  var rating: Int
+  var id: String?
+  var username: String?
+  var rating: Int?
 }
 
 private struct ChallengeEvent: Decodable {
