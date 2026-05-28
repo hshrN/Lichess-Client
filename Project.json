@@ -67,6 +67,26 @@
         }
       ],
       "type": "application"
+    },
+    "Lichess Board Tests": {
+      "deploymentTarget": "26.0",
+      "platform": "iOS",
+      "dependencies": [
+        {
+          "target": "Lichess Board"
+        }
+      ],
+      "settings": {
+        "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.f3424c4c-db54-418d-aa5d-426ff1c3f9a7.tests",
+        "SWIFT_VERSION": "5.0",
+        "TARGETED_DEVICE_FAMILY": "1"
+      },
+      "sources": [
+        {
+          "path": "Tests"
+        }
+      ],
+      "type": "bundle.unit-test"
     }
   }
 }

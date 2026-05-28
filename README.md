@@ -21,6 +21,7 @@ The app currently includes:
 - `THIRD_PARTY_NOTICES.md` for dependency license tracking.
 - `ASSET_CREDITS.md` for board piece and sound resource attribution.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
+- A first XCTest target covering Lichess request construction without making live network calls.
 
 The app now has a mixed state:
 
@@ -188,6 +189,21 @@ Recommended next architectural additions:
 - A separate game-state reducer to keep stream parsing and UI state mutation isolated.
 - `ChessPosition`: derive board position from `initialFen` plus UCI move list.
 
+## Testing
+
+The project now includes a `Lichess Board Tests` XCTest target.
+
+Current coverage:
+
+- Board event stream request construction.
+- Per-game stream request construction.
+- Public rapid seek form encoding, including omitting `color` for random seeks.
+- Direct challenge form encoding for followed players and bots.
+- Move submission, chat submission, abort, resign, challenge accept, and challenge decline request construction.
+- Online bot list request construction.
+
+These tests intentionally do not call the live Lichess API. Live pairing, bot challenges, and move submission can create real games and depend on account state, opponent availability, rate limits, and Lichess stream timing. Integration tests for those flows should use a dedicated test account and be kept separate from the default unit test suite.
+
 ## Implementation Milestones
 
 1. Add draw, takeback, and claim action endpoints to the live game UI.
@@ -195,7 +211,7 @@ Recommended next architectural additions:
 3. Improve seek/challenge UX so pending bot and public match flows are clearer and more actionable.
 4. Improve event/game stream reconnect behavior and cancellation semantics.
 5. Replace the remaining ad hoc JSON parsing with stronger typed decoding.
-6. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
+6. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction. Request construction tests are started.
 
 ## Fair Play Requirements
 
