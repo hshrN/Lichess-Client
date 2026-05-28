@@ -22,6 +22,7 @@ final class LichessClientModel {
   var selectedRoom = ChatRoom.player
   var draftMessage = ""
   var selectedSquare: BoardSquare?
+  var isBoardFlipped = false
   var board = Board()
   var isSubmittingMove = false
   var isSendingChat = false
@@ -47,6 +48,29 @@ final class LichessClientModel {
 
   var accountLabel: String {
     accountUsername.isEmpty ? "Not signed in" : accountUsername
+  }
+
+  var chessBoardState: ChessBoardState {
+    ChessBoardState(
+      board: board,
+      selectedSquare: selectedSquare.map(chessSquare),
+      legalTargets: selectedSquare.map { Set(board.legalMoves(forPieceAt: chessSquare($0))) } ?? [],
+      lastMove: activeGame.lastMove.count >= 4 ? ChessBoardMoveHighlight(
+        start: Square(String(activeGame.lastMove.prefix(2))),
+        end: Square(String(activeGame.lastMove.dropFirst(2).prefix(2)))
+      ) : nil,
+      checkedKingSquare: checkedKingSquare,
+      isFlipped: isBoardFlipped
+    )
+  }
+
+  var checkedKingSquare: Square? {
+    switch board.state {
+    case .check(let color), .checkmate(let color):
+      board.position.pieces.first { $0.kind == .king && $0.color == color }?.square
+    case .active, .draw, .promotion:
+      nil
+    }
   }
 
   func signIn() async {
@@ -335,6 +359,10 @@ final class LichessClientModel {
     selectedSquare = nil
   }
 
+  func flipBoard() {
+    isBoardFlipped.toggle()
+  }
+
   func accept(_ challenge: LichessChallenge) {
     updateChallenge(challenge, status: .accepted)
     events.insert(
@@ -439,6 +467,10 @@ final class LichessClientModel {
         }
       }
     }
+  }
+
+  func selectBoardSquare(_ square: Square) {
+    playMove(to: boardSquare(square))
   }
 
   func legalDestinations(for square: BoardSquare) -> Set<BoardSquare> {
@@ -814,18 +846,24 @@ final class LichessClientModel {
 
     var liveBoard = Board(position: startingPosition)
     let moves = movesString.split(separator: " ").map(String.init)
+    let previousMoveCount = activeGame.moves.count
+    var lastAppliedMove: Move?
     for move in moves {
-      apply(uciMove: move, to: &liveBoard)
+      lastAppliedMove = apply(uciMove: move, to: &liveBoard) ?? lastAppliedMove
     }
 
     board = liveBoard
     activeGame.moves = moves
     activeGame.lastMove = moves.last ?? ""
     activeGame.isMyTurn = board.position.sideToMove == (activeGame.myColor.lowercased() == "white" ? .white : .black)
+
+    if hasLoadedGameState, moves.count > previousMoveCount, let lastAppliedMove {
+      ChessSoundPlayer.shared.play(for: lastAppliedMove)
+    }
   }
 
-  private func apply(uciMove: String, to board: inout Board) {
-    guard uciMove.count >= 4 else { return }
+  private func apply(uciMove: String, to board: inout Board) -> Move? {
+    guard uciMove.count >= 4 else { return nil }
     let start = String(uciMove.prefix(2))
     let end = String(uciMove.dropFirst(2).prefix(2))
     let move = board.move(pieceAt: Square(start), to: Square(end))
@@ -834,7 +872,7 @@ final class LichessClientModel {
       let move,
       case .promotion = board.state
     else {
-      return
+      return move
     }
 
     let promotionCode = uciMove.suffix(1)
@@ -846,7 +884,7 @@ final class LichessClientModel {
     case "n": kind = .knight
     default: kind = .queen
     }
-    board.completePromotion(of: move, to: kind)
+    return board.completePromotion(of: move, to: kind)
   }
 
   private func updateClockState(state: GameStateEvent, meIsWhite: Bool, fallbackInitial: Int) {
@@ -882,6 +920,14 @@ final class LichessClientModel {
       return base
     }
     return "\(base)q"
+  }
+
+  private func chessSquare(_ square: BoardSquare) -> Square {
+    Square(square.uci)
+  }
+
+  private func boardSquare(_ square: Square) -> BoardSquare {
+    BoardSquare(file: square.file.number - 1, rank: square.rank.value - 1)
   }
 
   private func submitGameAction(title: String, icon: String, request: URLRequest) {

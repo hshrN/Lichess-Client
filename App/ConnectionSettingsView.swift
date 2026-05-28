@@ -2,6 +2,9 @@ import SwiftUI
 
 struct ConnectionSettingsView: View {
   @AppStorage("appearanceMode") private var appearanceModeRaw = AppearanceMode.system.rawValue
+  @AppStorage(AppPreferences.pieceThemeKey) private var pieceThemeRawValue = PieceTheme.rhosgfx.rawValue
+  @AppStorage(AppPreferences.boardStyleKey) private var boardStyleRawValue = BoardStyle.walnut.rawValue
+  @AppStorage(AppPreferences.soundEnabledKey) private var soundEnabled = AppPreferences.soundEnabled
   @Bindable var model: LichessClientModel
 
   var body: some View {
@@ -70,6 +73,22 @@ struct ConnectionSettingsView: View {
         }
       }
       .pickerStyle(.segmented)
+
+      Picker("Board", selection: $boardStyleRawValue) {
+        ForEach(BoardStyle.allCases) { style in
+          Text(style.title).tag(style.rawValue)
+        }
+      }
+      .pickerStyle(.segmented)
+
+      Picker("Pieces", selection: $pieceThemeRawValue) {
+        ForEach(PieceTheme.allCases) { theme in
+          Text(theme.title).tag(theme.rawValue)
+        }
+      }
+      .pickerStyle(.segmented)
+
+      Toggle("Sounds", isOn: $soundEnabled)
     }
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)

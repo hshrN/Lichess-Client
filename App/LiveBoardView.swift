@@ -7,7 +7,7 @@ struct LiveBoardView: View {
     VStack(spacing: 12) {
       RapidHeaderView(model: model)
       GameClockRow(game: model.activeGame)
-      ChessBoardView(model: model)
+      ChessBoardPanel(model: model)
       MoveControlsView(model: model)
       ChatComposerView(model: model)
       EventFeedView(events: model.events)
@@ -45,72 +45,24 @@ private struct ClockCard: View {
   }
 }
 
-private struct ChessBoardView: View {
-  @Environment(\.colorScheme) private var colorScheme
+private struct ChessBoardPanel: View {
   @Bindable var model: LichessClientModel
 
   var body: some View {
-    VStack(spacing: 0) {
-      ForEach(0..<8, id: \.self) { row in
-        HStack(spacing: 0) {
-          ForEach(0..<8, id: \.self) { column in
-            let square = BoardSquare(file: column, rank: 7 - row)
-            let isLegalDestination = model.selectedSquare.map { model.legalDestinations(for: $0).contains(square) } ?? false
-            Button {
-              withAnimation(.snappy) {
-                model.playMove(to: square)
-              }
-            } label: {
-              ZStack {
-                Rectangle()
-                  .fill(squareColor(row: row, column: column))
-                if model.selectedSquare == square {
-                  Circle()
-                    .stroke(.tint, lineWidth: 4)
-                    .padding(8)
-                }
-                if isLegalDestination {
-                  Circle()
-                    .fill(.tint.opacity(0.34))
-                    .frame(width: 18, height: 18)
-                }
-                Text(model.pieceSymbol(at: square) ?? "")
-                  .font(.system(size: 28, weight: .semibold))
-                  .minimumScaleFactor(0.7)
-              }
-              .aspectRatio(1, contentMode: .fit)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(square.uci)
-          }
-        }
+    VStack(spacing: 8) {
+      ChessBoardView(
+        state: model.chessBoardState,
+        isInteractionEnabled: model.hasLoadedGameState && model.activeGame.isMyTurn && model.activeGame.status == "started" && !model.isSubmittingMove,
+        syncingMessage: model.hasLoadedGameState ? nil : "Syncing board…",
+        onSelectSquare: model.selectBoardSquare
+      )
+
+      Button("Flip Board", systemImage: "arrow.triangle.2.circlepath") {
+        model.flipBoard()
       }
+      .buttonStyle(.bordered)
+      .frame(maxWidth: .infinity, alignment: .trailing)
     }
-    .clipShape(.rect(cornerRadius: 12))
-    .opacity(model.hasLoadedGameState ? 1 : 0.72)
-    .allowsHitTesting(model.hasLoadedGameState && model.activeGame.isMyTurn && model.activeGame.status == "started" && !model.isSubmittingMove)
-    .overlay {
-      ZStack {
-        RoundedRectangle(cornerRadius: 12)
-          .stroke(Color.black.opacity(0.08), lineWidth: 1)
-
-        if !model.hasLoadedGameState {
-          Text("Syncing board…")
-            .font(.headline)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color(.systemBackground).opacity(0.92), in: .capsule)
-        }
-      }
-    }
-  }
-
-  private func squareColor(row: Int, column: Int) -> Color {
-    if colorScheme == .dark {
-      return (row + column).isMultiple(of: 2) ? Color(red: 0.43, green: 0.45, blue: 0.39) : Color(red: 0.18, green: 0.31, blue: 0.22)
-    }
-
-    return (row + column).isMultiple(of: 2) ? Color(red: 0.91, green: 0.87, blue: 0.76) : Color(red: 0.36, green: 0.53, blue: 0.39)
   }
 }
 
