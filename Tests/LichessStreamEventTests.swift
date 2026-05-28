@@ -100,7 +100,9 @@ final class LichessStreamEventTests: XCTestCase {
       """
       {
         "type": "opponentGone",
-        "gone": true
+        "gone": true,
+        "claimWinInSeconds": 12,
+        "claimDrawInSeconds": 0
       }
       """.utf8
     )
@@ -112,6 +114,8 @@ final class LichessStreamEventTests: XCTestCase {
     XCTAssertEqual(chat.text, "Good luck")
     XCTAssertEqual(chat.room, "player")
     XCTAssertTrue(gone.gone)
+    XCTAssertEqual(gone.claimWinInSeconds, 12)
+    XCTAssertEqual(gone.claimDrawInSeconds, 0)
   }
 
   func testDecodesChallengeEvent() throws {

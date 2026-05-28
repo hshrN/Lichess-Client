@@ -31,9 +31,11 @@ The app now has a mixed state:
 - Live public seek requests
 - Live public seek connection lifecycle, including seek-open and seek-close handling
 - Live direct challenges to followed players and online bot accounts
+- Live challenge accept and decline requests
 - Live online bot list refresh
 - Live per-game board stream with clock, status, chat-line, and move-list updates
 - Game-state updates preserve the `gameFull.initialFen` when replaying later `gameState` move lists.
+- Opponent-away game stream updates are surfaced with claim win/draw affordances when Lichess reports they are available.
 - Live move submission
 - Live chat submission
 - Live abort, resign, draw offer, takeback request, claim victory, claim draw, and berserk actions

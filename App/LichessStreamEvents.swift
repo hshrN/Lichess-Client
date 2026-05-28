@@ -70,6 +70,8 @@ struct ChatLineEvent: Decodable {
 
 struct OpponentGoneEvent: Decodable {
   var gone: Bool
+  var claimWinInSeconds: Int?
+  var claimDrawInSeconds: Int?
 }
 
 struct Status: Decodable {

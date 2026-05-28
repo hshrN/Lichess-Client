@@ -32,11 +32,13 @@ struct ChallengesView: View {
                 model.decline(challenge)
               }
               .buttonStyle(.bordered)
+              .disabled(model.isSubmittingChallengeAction)
 
               Button("Accept", systemImage: "checkmark") {
                 model.accept(challenge)
               }
               .buttonStyle(.borderedProminent)
+              .disabled(model.isSubmittingChallengeAction)
             }
           }
         }

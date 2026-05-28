@@ -9,6 +9,7 @@ struct LiveBoardView: View {
       GameClockRow(game: model.activeGame)
       ChessBoardPanel(model: model)
       MoveControlsView(model: model)
+      OpponentPresenceView(model: model)
       ChatComposerView(model: model)
       EventFeedView(events: model.events)
     }
@@ -109,6 +110,39 @@ private struct MoveControlsView: View {
       .disabled(model.isSubmittingGameAction)
     }
     .frame(maxWidth: .infinity)
+  }
+}
+
+private struct OpponentPresenceView: View {
+  @Bindable var model: LichessClientModel
+
+  var body: some View {
+    if let message = model.opponentPresenceMessage {
+      HStack(spacing: 10) {
+        Image(systemName: "person.crop.circle.badge.exclamationmark")
+          .foregroundStyle(.tint)
+
+        Text(message)
+          .font(.subheadline)
+          .frame(maxWidth: .infinity, alignment: .leading)
+
+        if model.canClaimVictory {
+          Button("Claim Win", systemImage: "crown") {
+            model.claimVictory()
+          }
+          .buttonStyle(.borderedProminent)
+          .disabled(model.isSubmittingGameAction)
+        } else if model.canClaimDraw {
+          Button("Claim Draw", systemImage: "equal.square") {
+            model.claimDraw()
+          }
+          .buttonStyle(.bordered)
+          .disabled(model.isSubmittingGameAction)
+        }
+      }
+      .padding(14)
+      .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+    }
   }
 }
 

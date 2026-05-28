@@ -27,6 +27,10 @@ final class LichessClientModel {
   var isSubmittingMove = false
   var isSendingChat = false
   var isSubmittingGameAction = false
+  var isSubmittingChallengeAction = false
+  var opponentPresenceMessage: String?
+  var canClaimVictory = false
+  var canClaimDraw = false
   private var activeInitialFEN: String?
   private var eventStreamTask: Task<Void, Never>?
   private var seekTask: Task<Void, Never>?
@@ -359,6 +363,9 @@ final class LichessClientModel {
     isSearching = false
     selectedSquare = nil
     activeInitialFEN = nil
+    opponentPresenceMessage = nil
+    canClaimVictory = false
+    canClaimDraw = false
   }
 
   func flipBoard() {
@@ -366,18 +373,22 @@ final class LichessClientModel {
   }
 
   func accept(_ challenge: LichessChallenge) {
-    updateChallenge(challenge, status: .accepted)
-    events.insert(
-      LichessEvent(title: "Challenge accepted", detail: challenge.opponent, systemImage: "checkmark.circle")
-      , at: 0
+    submitChallengeDecision(
+      challenge,
+      title: "Challenge accepted",
+      status: .accepted,
+      icon: "checkmark.circle",
+      request: api.acceptChallengeRequest(challengeId: challenge.id)
     )
   }
 
   func decline(_ challenge: LichessChallenge) {
-    updateChallenge(challenge, status: .declined)
-    events.insert(
-      LichessEvent(title: "Challenge declined", detail: challenge.opponent, systemImage: "xmark.circle")
-      , at: 0
+    submitChallengeDecision(
+      challenge,
+      title: "Challenge declined",
+      status: .declined,
+      icon: "xmark.circle",
+      request: api.declineChallengeRequest(challengeId: challenge.id)
     )
   }
 
@@ -656,6 +667,9 @@ final class LichessClientModel {
       isInGame = true
       hasLoadedGameState = false
       activeInitialFEN = nil
+      opponentPresenceMessage = nil
+      canClaimVictory = false
+      canClaimDraw = false
       startGameStream(gameID: event.game.gameId)
       events.insert(
         LichessEvent(title: "Game started", detail: "\((event.game.opponent.username ?? event.game.opponent.id) ?? "Opponent") • \(event.game.speed.capitalized)", systemImage: "play.circle"),
@@ -827,7 +841,21 @@ final class LichessClientModel {
       activeGame.chat.insert(ChatLine(user: line.username, text: line.text, room: room), at: 0)
     case "opponentGone":
       guard let event = try? JSONDecoder().decode(OpponentGoneEvent.self, from: data) else { return }
-      let detail = event.gone ? "Opponent left the game." : "Opponent returned."
+      let detail: String
+      if event.gone {
+        let winText = event.claimWinInSeconds.map { $0 <= 0 ? "Win can be claimed." : "Win in \($0)s." }
+        let drawText = event.claimDrawInSeconds.map { $0 <= 0 ? "Draw can be claimed." : "Draw in \($0)s." }
+        let claimDetail = [winText, drawText].compactMap(\.self).joined(separator: " ")
+        detail = claimDetail.isEmpty ? "Opponent left the game." : claimDetail
+        opponentPresenceMessage = detail
+        canClaimVictory = (event.claimWinInSeconds ?? Int.max) <= 0
+        canClaimDraw = (event.claimDrawInSeconds ?? Int.max) <= 0
+      } else {
+        detail = "Opponent returned."
+        opponentPresenceMessage = nil
+        canClaimVictory = false
+        canClaimDraw = false
+      }
       events.insert(
         LichessEvent(title: "Presence update", detail: detail, systemImage: "person.crop.circle.badge.exclamationmark"),
         at: 0
@@ -922,6 +950,55 @@ final class LichessClientModel {
         await self.recordEvent(title: "\(title) sent", detail: activeGame.id, icon: icon)
       } catch {
         await self.recordEvent(title: "\(title) failed", detail: error.localizedDescription, icon: "exclamationmark.triangle")
+      }
+    }
+  }
+
+  private func submitChallengeDecision(
+    _ challenge: LichessChallenge,
+    title: String,
+    status: ChallengeStatus,
+    icon: String,
+    request: URLRequest
+  ) {
+    guard isConfigured else {
+      events.insert(
+        LichessEvent(title: "Sign-in required", detail: "Sign in with Lichess before responding.", systemImage: "person.crop.circle"),
+        at: 0
+      )
+      return
+    }
+
+    guard !isSubmittingChallengeAction else {
+      return
+    }
+
+    isSubmittingChallengeAction = true
+    events.insert(
+      LichessEvent(title: "\(title) requested", detail: challenge.opponent, systemImage: icon),
+      at: 0
+    )
+
+    Task { [weak self] in
+      guard let self else { return }
+      defer {
+        Task { @MainActor in
+          self.isSubmittingChallengeAction = false
+        }
+      }
+
+      do {
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+          await self.recordEvent(title: "Challenge response failed", detail: challenge.opponent, icon: "exclamationmark.triangle")
+          return
+        }
+        await MainActor.run {
+          self.updateChallenge(challenge, status: status)
+        }
+        await self.recordEvent(title: title, detail: challenge.opponent, icon: icon)
+      } catch {
+        await self.recordEvent(title: "Challenge response failed", detail: error.localizedDescription, icon: "exclamationmark.triangle")
       }
     }
   }
