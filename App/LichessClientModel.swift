@@ -27,6 +27,7 @@ final class LichessClientModel {
   var isSubmittingMove = false
   var isSendingChat = false
   var isSubmittingGameAction = false
+  private var activeInitialFEN: String?
   private var eventStreamTask: Task<Void, Never>?
   private var seekTask: Task<Void, Never>?
   private var gameStreamTask: Task<Void, Never>?
@@ -357,6 +358,7 @@ final class LichessClientModel {
     hasLoadedGameState = false
     isSearching = false
     selectedSquare = nil
+    activeInitialFEN = nil
   }
 
   func flipBoard() {
@@ -633,6 +635,7 @@ final class LichessClientModel {
       )
       isInGame = true
       hasLoadedGameState = false
+      activeInitialFEN = nil
       startGameStream(gameID: event.game.gameId)
       events.insert(
         LichessEvent(title: "Game started", detail: "\((event.game.opponent.username ?? event.game.opponent.id) ?? "Opponent") • \(event.game.speed.capitalized)", systemImage: "play.circle"),
@@ -780,6 +783,7 @@ final class LichessClientModel {
       activeGame.opponentRating = opponentPlayer.rating ?? activeGame.opponentRating
       activeGame.speed = gameSpeedLabel(speed: event.speed, clock: event.clock, daysPerTurn: event.daysPerTurn)
       activeGame.status = event.state.status
+      activeInitialFEN = event.initialFen
       updateBoardState(initialFEN: event.initialFen, movesString: event.state.moves)
       updateClockState(
         state: event.state,
@@ -795,7 +799,7 @@ final class LichessClientModel {
       guard let event = try? JSONDecoder().decode(GameStateEvent.self, from: data) else { return }
       let meIsWhite = activeGame.myColor.lowercased() == "white"
       activeGame.status = event.status
-      updateBoardState(initialFEN: nil, movesString: event.moves)
+      updateBoardState(initialFEN: activeInitialFEN, movesString: event.moves)
       updateClockState(state: event, meIsWhite: meIsWhite, fallbackInitial: 0)
     case "chatLine":
       guard let line = try? JSONDecoder().decode(ChatLineEvent.self, from: data) else { return }

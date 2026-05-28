@@ -43,6 +43,26 @@ struct LichessBoardAPI {
     postRequest(path: "/api/board/game/\(gameId)/resign")
   }
 
+  func drawRequest(gameId: String, accept: Bool) -> URLRequest {
+    postRequest(path: "/api/board/game/\(gameId)/draw/\(accept ? "yes" : "no")")
+  }
+
+  func takebackRequest(gameId: String, accept: Bool) -> URLRequest {
+    postRequest(path: "/api/board/game/\(gameId)/takeback/\(accept ? "yes" : "no")")
+  }
+
+  func claimVictoryRequest(gameId: String) -> URLRequest {
+    postRequest(path: "/api/board/game/\(gameId)/claim-victory")
+  }
+
+  func claimDrawRequest(gameId: String) -> URLRequest {
+    postRequest(path: "/api/board/game/\(gameId)/claim-draw")
+  }
+
+  func berserkRequest(gameId: String) -> URLRequest {
+    postRequest(path: "/api/board/game/\(gameId)/berserk")
+  }
+
   func seekRequest(preset: SeekPreset) -> URLRequest {
     var request = authenticatedRequest(path: "/api/board/seek")
     request.httpMethod = "POST"

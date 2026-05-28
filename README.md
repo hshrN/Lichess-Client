@@ -33,9 +33,11 @@ The app now has a mixed state:
 - Live direct challenges to followed players and online bot accounts
 - Live online bot list refresh
 - Live per-game board stream with clock, status, chat-line, and move-list updates
+- Game-state updates preserve the `gameFull.initialFen` when replaying later `gameState` move lists.
 - Live move submission
 - Live chat submission
 - Live abort and resign actions
+- Request builders for draw offers, takeback offers, claim victory, claim draw, and berserk.
 - Seek timeout after 90 seconds if no public match is found
 - Challenge declined/canceled handling from the Lichess event stream
 - Board interaction is gated until `gameFull` has loaded and the live board state is ready
@@ -204,16 +206,18 @@ Current coverage:
 - Public rapid seek form encoding, including omitting `color` for random seeks.
 - Direct challenge form encoding for followed players and bots.
 - Move submission, chat submission, abort, resign, challenge accept, and challenge decline request construction.
+- Draw, takeback, claim-victory, claim-draw, and berserk request construction.
 - Online bot list request construction.
 - Followed-player and online-bot row parsing.
 - Event-stream and game-stream payload decoding for game start, full game state, chat, opponent presence, and challenges.
 - Board reconstruction from `startpos`, custom FEN, UCI move history, and promotion moves.
+- Regression coverage for preserving non-standard initial positions during game stream updates.
 
 These tests intentionally do not call the live Lichess API. Live pairing, bot challenges, and move submission can create real games and depend on account state, opponent availability, rate limits, and Lichess stream timing. Integration tests for those flows should use a dedicated test account and be kept separate from the default unit test suite.
 
 ## Implementation Milestones
 
-1. Add draw, takeback, and claim action endpoints to the live game UI.
+1. Add draw, takeback, claim, and berserk actions to the live game UI. Request builders are ready.
 2. Add promotion choice UI instead of defaulting promotions to queen.
 3. Improve seek/challenge UX so pending bot and public match flows are clearer and more actionable.
 4. Improve event/game stream reconnect behavior and cancellation semantics.

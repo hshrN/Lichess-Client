@@ -81,6 +81,24 @@ final class LichessParsingTests: XCTestCase {
     XCTAssertEqual(result.board.position.sideToMove, .black)
   }
 
+  func testPositionBuilderKeepsCustomFenAcrossLaterGameStateMoveLists() throws {
+    let initialFEN = "8/8/8/8/8/8/4P3/4K2k w - - 0 1"
+    let first = LichessBoardPositionBuilder.build(
+      initialFEN: initialFEN,
+      movesString: "e2e4"
+    )
+    let later = LichessBoardPositionBuilder.build(
+      initialFEN: initialFEN,
+      movesString: "e2e4 h1h2"
+    )
+
+    XCTAssertEqual(first.board.position.piece(at: Square("e4"))?.kind, .pawn)
+    XCTAssertEqual(later.moves, ["e2e4", "h1h2"])
+    XCTAssertEqual(later.board.position.piece(at: Square("e4"))?.kind, .pawn)
+    XCTAssertEqual(later.board.position.piece(at: Square("h2"))?.kind, .king)
+    XCTAssertNil(later.board.position.piece(at: Square("h1")))
+  }
+
   func testPositionBuilderCompletesPromotionMoves() throws {
     let result = LichessBoardPositionBuilder.build(
       initialFEN: "4k3/P7/8/8/8/8/8/4K3 w - - 0 1",

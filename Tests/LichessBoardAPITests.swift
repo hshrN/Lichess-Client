@@ -96,12 +96,35 @@ final class LichessBoardAPITests: XCTestCase {
   func testGameActionRequestsArePosts() throws {
     let abort = api.abortRequest(gameId: "abc123")
     let resign = api.resignRequest(gameId: "abc123")
+    let claimVictory = api.claimVictoryRequest(gameId: "abc123")
+    let claimDraw = api.claimDrawRequest(gameId: "abc123")
+    let berserk = api.berserkRequest(gameId: "abc123")
 
     XCTAssertEqual(abort.url?.absoluteString, "https://lichess.org/api/board/game/abc123/abort")
     XCTAssertEqual(abort.httpMethod, "POST")
     XCTAssertEqual(abort.value(forHTTPHeaderField: "Accept"), "application/json")
     XCTAssertEqual(resign.url?.absoluteString, "https://lichess.org/api/board/game/abc123/resign")
     XCTAssertEqual(resign.httpMethod, "POST")
+    XCTAssertEqual(claimVictory.url?.absoluteString, "https://lichess.org/api/board/game/abc123/claim-victory")
+    XCTAssertEqual(claimVictory.httpMethod, "POST")
+    XCTAssertEqual(claimDraw.url?.absoluteString, "https://lichess.org/api/board/game/abc123/claim-draw")
+    XCTAssertEqual(claimDraw.httpMethod, "POST")
+    XCTAssertEqual(berserk.url?.absoluteString, "https://lichess.org/api/board/game/abc123/berserk")
+    XCTAssertEqual(berserk.httpMethod, "POST")
+  }
+
+  func testOfferActionRequestsUseYesNoPathValues() throws {
+    let drawYes = api.drawRequest(gameId: "abc123", accept: true)
+    let drawNo = api.drawRequest(gameId: "abc123", accept: false)
+    let takebackYes = api.takebackRequest(gameId: "abc123", accept: true)
+    let takebackNo = api.takebackRequest(gameId: "abc123", accept: false)
+
+    XCTAssertEqual(drawYes.url?.absoluteString, "https://lichess.org/api/board/game/abc123/draw/yes")
+    XCTAssertEqual(drawYes.httpMethod, "POST")
+    XCTAssertEqual(drawNo.url?.absoluteString, "https://lichess.org/api/board/game/abc123/draw/no")
+    XCTAssertEqual(takebackYes.url?.absoluteString, "https://lichess.org/api/board/game/abc123/takeback/yes")
+    XCTAssertEqual(takebackYes.httpMethod, "POST")
+    XCTAssertEqual(takebackNo.url?.absoluteString, "https://lichess.org/api/board/game/abc123/takeback/no")
   }
 
   func testBotOnlineRequestUsesNdjsonLimit() throws {
