@@ -8,6 +8,7 @@ The app currently includes:
 
 - A richer iOS dashboard with play controls, following challenges, challenge inbox, activity, and Lichess account status.
 - A live board UI backed by ChessKit and updated from Lichess game streams.
+- A reusable themed chessboard component with image piece themes, board styles, coordinates, selected/legal/last-move/check highlights, flipping, and a preview view.
 - Rapid-only seek presets that map to Lichess Board API seeks.
 - Following list and direct challenge UI for players the user follows.
 - Bot play panel for challenging online bot accounts.
@@ -16,7 +17,9 @@ The app currently includes:
 - Player and spectator chat UI.
 - Native Lichess OAuth sign-in using the authorization code flow with PKCE and Keychain-backed session storage.
 - Appearance setting for System, Light, and Dark modes.
+- Board style, piece theme, and sound preferences.
 - `THIRD_PARTY_NOTICES.md` for dependency license tracking.
+- `ASSET_CREDITS.md` for board piece and sound resource attribution.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
 
 The app now has a mixed state:
@@ -150,6 +153,21 @@ Recommended path:
 5. Send the selected legal move to Lichess as UCI.
 6. Never expose engine evaluation, best-move ranking, opening-book help, or analysis during active games.
 
+## Board Component
+
+The reusable board rendering layer is split into:
+
+- `ChessBoardView`: isolated SwiftUI board renderer.
+- `ChessBoardState`: small adapter state object for pieces, legal targets, selected square, last move, checked king, and flip state.
+- `ChessBoardAppearance`: board styles, piece themes, sound preferences, and preference keys.
+- `ChessAssetImage`: local image loader for bundled piece PNGs.
+- `ChessSoundPlayer`: optional AVFoundation-backed move/capture/check sounds.
+- `ChessBoardPreviewView`: reusable board preview component.
+
+The full standalone `ChessGame` / Maia engine model from the source snippet was not ported. This app keeps Lichess networking and game state in `LichessClientModel`, then adapts that state into `ChessBoardState`.
+
+Required bundled resources are documented in `App/Resources/README.md`. The board falls back to Unicode chess symbols if image assets are missing, but production builds should include the PNG piece themes and MP3 sound files listed there.
+
 ## Architecture
 
 The current implementation is split into:
@@ -159,6 +177,7 @@ The current implementation is split into:
 - `LichessBoardAPI`: authenticated URL request construction for Board API calls and challenge flows.
 - Challenge/following request builders for `GET /api/rel/following`, `GET /api/challenge`, direct challenge creation, accept, and decline.
 - Bot-play request builders for `GET /api/bot/online` and direct bot challenges through `POST /api/challenge/{username}`.
+- Reusable board files for themed rendering, asset loading, preview, and sounds.
 - SwiftUI screen files for the board, pairing, challenges, settings, and header.
 
 Recommended next architectural additions:
