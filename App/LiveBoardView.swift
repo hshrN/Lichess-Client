@@ -87,9 +87,21 @@ private struct ChessBoardView: View {
       }
     }
     .clipShape(.rect(cornerRadius: 12))
+    .opacity(model.hasLoadedGameState ? 1 : 0.72)
+    .allowsHitTesting(model.hasLoadedGameState && model.activeGame.isMyTurn && model.activeGame.status == "started" && !model.isSubmittingMove)
     .overlay {
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+      ZStack {
+        RoundedRectangle(cornerRadius: 12)
+          .stroke(Color.black.opacity(0.08), lineWidth: 1)
+
+        if !model.hasLoadedGameState {
+          Text("Syncing board…")
+            .font(.headline)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color(.systemBackground).opacity(0.92), in: .capsule)
+        }
+      }
     }
   }
 

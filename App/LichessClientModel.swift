@@ -9,6 +9,7 @@ final class LichessClientModel {
   var streamState = StreamConnectionState.disconnected
   var activeGame = LichessGame.sample
   var isInGame = false
+  var hasLoadedGameState = false
   var isSearching = false
   var isAuthenticating = false
   var authError: String?
@@ -321,11 +322,13 @@ final class LichessClientModel {
   func openPreviewGame() {
     isSearching = false
     isInGame = true
+    hasLoadedGameState = true
     activeGame.status = "started"
   }
 
   func returnHome() {
     isInGame = false
+    hasLoadedGameState = false
     isSearching = false
     selectedSquare = nil
   }
@@ -347,6 +350,30 @@ final class LichessClientModel {
   }
 
   func playMove(to square: BoardSquare) {
+    guard hasLoadedGameState else {
+      events.insert(
+        LichessEvent(title: "Board syncing", detail: "Wait for the live game state before making a move.", systemImage: "hourglass"),
+        at: 0
+      )
+      return
+    }
+
+    guard activeGame.status == "started" else {
+      events.insert(
+        LichessEvent(title: "Move blocked", detail: "This game is not currently active.", systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+      return
+    }
+
+    guard activeGame.isMyTurn else {
+      events.insert(
+        LichessEvent(title: "Move blocked", detail: "It is not your turn.", systemImage: "hand.raised"),
+        at: 0
+      )
+      return
+    }
+
     guard let selectedSquare else {
       if pieceSymbol(at: square) != nil {
         self.selectedSquare = square
@@ -557,6 +584,7 @@ final class LichessClientModel {
         chat: []
       )
       isInGame = true
+      hasLoadedGameState = false
       startGameStream(gameID: event.game.gameId)
       events.insert(
         LichessEvent(title: "Game started", detail: "\(event.game.opponent.username) • \(event.game.speed.capitalized)", systemImage: "play.circle"),
@@ -732,6 +760,11 @@ final class LichessClientModel {
         state: event.state,
         meIsWhite: meIsWhite,
         fallbackInitial: event.clock?.initial ?? 0
+      )
+      hasLoadedGameState = true
+      events.insert(
+        LichessEvent(title: "Board ready", detail: "Live game state loaded.", systemImage: "checkmark.circle"),
+        at: 0
       )
     case "gameState":
       guard let event = try? JSONDecoder().decode(GameStateEvent.self, from: data) else { return }

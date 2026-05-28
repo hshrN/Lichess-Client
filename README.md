@@ -33,6 +33,7 @@ The app now has a mixed state:
 - Live abort and resign actions
 - Seek timeout after 90 seconds if no public match is found
 - Challenge declined/canceled handling from the Lichess event stream
+- Board interaction is gated until `gameFull` has loaded and the live board state is ready
 
 Some flows are still incomplete, especially draw/takeback/claim actions, promotion choice UI, stronger seek/challenge UX, and robust reconnect handling.
 
@@ -202,6 +203,7 @@ Post-game review can be considered later only if it is clearly separated from ac
 - Declined and canceled challenges update from the Lichess event stream.
 - A `gameStart` event opens the game screen.
 - `gameFull` and `gameState` update the board, clocks, and status.
+- The board stays in a syncing state until `gameFull` arrives, which prevents early local taps from being mistaken for real server moves.
 - Tapping a legal move sends a real move request to Lichess.
 - Chat composer sends real player/spectator chat messages.
 - Abort and resign buttons send real game actions.
