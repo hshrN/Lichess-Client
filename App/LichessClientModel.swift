@@ -28,6 +28,7 @@ final class LichessClientModel {
   private var eventStreamTask: Task<Void, Never>?
   private var seekTask: Task<Void, Never>?
   private var gameStreamTask: Task<Void, Never>?
+  private var seekTimeoutTask: Task<Void, Never>?
 
   init() {
     if let session = LichessAuthStore.loadSession() {
@@ -93,6 +94,8 @@ final class LichessClientModel {
     LichessAuthStore.clearSession()
     seekTask?.cancel()
     seekTask = nil
+    seekTimeoutTask?.cancel()
+    seekTimeoutTask = nil
     eventStreamTask?.cancel()
     eventStreamTask = nil
     gameStreamTask?.cancel()
@@ -134,6 +137,7 @@ final class LichessClientModel {
 
     selectedSeekPreset = preset
     seekTask?.cancel()
+    seekTimeoutTask?.cancel()
     startEventStreamIfNeeded()
     isSearching = true
     streamState = .connected
@@ -166,11 +170,25 @@ final class LichessClientModel {
         await self.handleSeekFailure(message: error.localizedDescription)
       }
     }
+    seekTimeoutTask = Task { [weak self] in
+      guard let self else { return }
+      do {
+        try await Task.sleep(for: .seconds(90))
+        guard !Task.isCancelled else { return }
+        await self.handleSeekFailure(message: "No match found after 90 seconds. Try again or use a direct challenge.")
+      } catch is CancellationError {
+        return
+      } catch {
+        return
+      }
+    }
   }
 
   func cancelSeek() {
     seekTask?.cancel()
     seekTask = nil
+    seekTimeoutTask?.cancel()
+    seekTimeoutTask = nil
     isSearching = false
     events.insert(
       LichessEvent(title: "Seek canceled", detail: selectedSeekPreset.title, systemImage: "xmark.circle"),
@@ -512,6 +530,8 @@ final class LichessClientModel {
       isSearching = false
       seekTask?.cancel()
       seekTask = nil
+      seekTimeoutTask?.cancel()
+      seekTimeoutTask = nil
       streamState = .connected
       activeGame = LichessGame(
         id: event.game.gameId,
@@ -547,6 +567,26 @@ final class LichessClientModel {
       challenges.insert(newChallenge, at: 0)
       events.insert(
         LichessEvent(title: "Challenge received", detail: newChallenge.opponent, systemImage: "tray"),
+        at: 0
+      )
+    case "challengeDeclined":
+      guard let event = try? JSONDecoder().decode(ChallengeEvent.self, from: data) else { return }
+      updateChallengeStatus(id: event.challenge.id, status: .declined)
+      events.insert(
+        LichessEvent(title: "Challenge declined", detail: event.challenge.destUser?.name ?? event.challenge.challenger.name, systemImage: "xmark.circle"),
+        at: 0
+      )
+    case "challengeCanceled":
+      guard let event = try? JSONDecoder().decode(ChallengeEvent.self, from: data) else { return }
+      updateChallengeStatus(id: event.challenge.id, status: .canceled)
+      events.insert(
+        LichessEvent(title: "Challenge canceled", detail: event.challenge.destUser?.name ?? event.challenge.challenger.name, systemImage: "xmark.circle"),
+        at: 0
+      )
+    case "gameFinish":
+      guard let event = try? JSONDecoder().decode(GameFinishEvent.self, from: data) else { return }
+      events.insert(
+        LichessEvent(title: "Game finished", detail: event.game.gameId, systemImage: "flag.checkered"),
         at: 0
       )
     default:
@@ -594,6 +634,8 @@ final class LichessClientModel {
   private func handleSeekFailure(message: String) {
     isSearching = false
     seekTask = nil
+    seekTimeoutTask?.cancel()
+    seekTimeoutTask = nil
     events.insert(
       LichessEvent(title: "Seek ended", detail: message, systemImage: "exclamationmark.triangle"),
       at: 0
@@ -815,6 +857,13 @@ final class LichessClientModel {
       }
     }
   }
+
+  private func updateChallengeStatus(id: String, status: ChallengeStatus) {
+    guard let index = challenges.firstIndex(where: { $0.id == id }) else {
+      return
+    }
+    challenges[index].status = status
+  }
 }
 
 private struct EventEnvelope: Decodable {
@@ -823,6 +872,10 @@ private struct EventEnvelope: Decodable {
 
 private struct GameStartEvent: Decodable {
   var game: StartedGame
+}
+
+private struct GameFinishEvent: Decodable {
+  var game: FinishedGame
 }
 
 private struct StartedGame: Decodable {
@@ -834,6 +887,10 @@ private struct StartedGame: Decodable {
   var opponent: Opponent
   var isMyTurn: Bool
   var secondsLeft: Int
+}
+
+private struct FinishedGame: Decodable {
+  var gameId: String
 }
 
 private struct GameFullEvent: Decodable {

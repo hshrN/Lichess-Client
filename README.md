@@ -30,8 +30,10 @@ The app now has a mixed state:
 - Live move submission
 - Live chat submission
 - Live abort and resign actions
+- Seek timeout after 90 seconds if no public match is found
+- Challenge declined/canceled handling from the Lichess event stream
 
-Some flows are still incomplete, especially draw/takeback/claim actions, promotion choice UI, and robust reconnect handling.
+Some flows are still incomplete, especially draw/takeback/claim actions, promotion choice UI, stronger seek/challenge UX, and robust reconnect handling.
 
 ## Authentication
 
@@ -167,9 +169,10 @@ Recommended next architectural additions:
 
 1. Add draw, takeback, and claim action endpoints to the live game UI.
 2. Add promotion choice UI instead of defaulting promotions to queen.
-3. Improve event/game stream reconnect behavior and cancellation semantics.
-4. Replace the remaining ad hoc JSON parsing with stronger typed decoding.
-5. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
+3. Improve seek/challenge UX so pending bot and public match flows are clearer and more actionable.
+4. Improve event/game stream reconnect behavior and cancellation semantics.
+5. Replace the remaining ad hoc JSON parsing with stronger typed decoding.
+6. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction.
 
 ## Fair Play Requirements
 
@@ -192,7 +195,9 @@ Post-game review can be considered later only if it is clearly separated from ac
 - Appearance picker switches between System, Light, and Dark.
 - Home screen starts with Play, not a chessboard.
 - Rapid seek preset buttons create real seek requests and can be canceled.
+- Public seeks stop after 90 seconds and show a failure event if no match is found.
 - Bot/following challenge buttons create real challenge requests.
+- Declined and canceled challenges update from the Lichess event stream.
 - A `gameStart` event opens the game screen.
 - `gameFull` and `gameState` update the board, clocks, and status.
 - Tapping a legal move sends a real move request to Lichess.

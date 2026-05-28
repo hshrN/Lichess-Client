@@ -69,12 +69,14 @@ enum ChallengeStatus: String {
   case pending
   case accepted
   case declined
+  case canceled
 
   var title: String {
     switch self {
     case .pending: "Pending"
     case .accepted: "Accepted"
     case .declined: "Declined"
+    case .canceled: "Canceled"
     }
   }
 }
