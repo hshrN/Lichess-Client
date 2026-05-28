@@ -254,7 +254,7 @@ final class LichessClientModel {
       var loadedPlayers: [LichessFollowedPlayer] = []
       for try await line in bytes.lines {
         guard let data = line.data(using: .utf8), !line.isEmpty else { continue }
-        if let player = try? parseFollowedPlayer(from: data) {
+        if let player = try? LichessPlayerParser.parseFollowedPlayer(from: data) {
           loadedPlayers.append(player)
         }
       }
@@ -312,7 +312,7 @@ final class LichessClientModel {
       var loadedBots: [LichessBotPlayer] = []
       for try await line in bytes.lines {
         guard let data = line.data(using: .utf8), !line.isEmpty else { continue }
-        if let bot = try? parseBotPlayer(from: data) {
+        if let bot = try? LichessPlayerParser.parseBotPlayer(from: data) {
           loadedBots.append(bot)
         }
       }
@@ -734,29 +734,6 @@ final class LichessClientModel {
     )
   }
 
-  private func parseBotPlayer(from data: Data) throws -> LichessBotPlayer {
-    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-    let id = json?["id"] as? String ?? UUID().uuidString
-    let username = json?["username"] as? String ?? json?["name"] as? String ?? id
-    let title = json?["title"] as? String ?? "BOT"
-    let perfs = json?["perfs"] as? [String: Any]
-    let rapid = perfs?["rapid"] as? [String: Any]
-    let rating = rapid?["rating"] as? Int
-    return LichessBotPlayer(id: id, username: username, rating: rating, online: true, title: title)
-  }
-
-  private func parseFollowedPlayer(from data: Data) throws -> LichessFollowedPlayer {
-    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-    let id = json?["id"] as? String ?? UUID().uuidString
-    let username = json?["name"] as? String ?? json?["username"] as? String ?? id
-    let perfs = json?["perfs"] as? [String: Any]
-    let rapid = perfs?["rapid"] as? [String: Any]
-    let rating = rapid?["rating"] as? Int
-    let online = json?["online"] as? Bool ?? false
-    let url = "https://lichess.org/@/\(username)"
-    return LichessFollowedPlayer(id: id, username: username, rapidRating: rating, online: online, url: url)
-  }
-
   private func formatSeconds(_ seconds: Int) -> String {
     let minutes = seconds / 60
     let remainder = seconds % 60
@@ -837,54 +814,17 @@ final class LichessClientModel {
   }
 
   private func updateBoardState(initialFEN: String?, movesString: String) {
-    let startingPosition: Position
-    if let initialFEN, initialFEN != "startpos", let position = Position(fen: initialFEN) {
-      startingPosition = position
-    } else {
-      startingPosition = .standard
-    }
-
-    var liveBoard = Board(position: startingPosition)
-    let moves = movesString.split(separator: " ").map(String.init)
+    let result = LichessBoardPositionBuilder.build(initialFEN: initialFEN, movesString: movesString)
     let previousMoveCount = activeGame.moves.count
-    var lastAppliedMove: Move?
-    for move in moves {
-      lastAppliedMove = apply(uciMove: move, to: &liveBoard) ?? lastAppliedMove
-    }
 
-    board = liveBoard
-    activeGame.moves = moves
-    activeGame.lastMove = moves.last ?? ""
+    board = result.board
+    activeGame.moves = result.moves
+    activeGame.lastMove = result.lastMove
     activeGame.isMyTurn = board.position.sideToMove == (activeGame.myColor.lowercased() == "white" ? .white : .black)
 
-    if hasLoadedGameState, moves.count > previousMoveCount, let lastAppliedMove {
+    if hasLoadedGameState, result.moves.count > previousMoveCount, let lastAppliedMove = result.lastAppliedMove {
       ChessSoundPlayer.shared.play(for: lastAppliedMove)
     }
-  }
-
-  private func apply(uciMove: String, to board: inout Board) -> Move? {
-    guard uciMove.count >= 4 else { return nil }
-    let start = String(uciMove.prefix(2))
-    let end = String(uciMove.dropFirst(2).prefix(2))
-    let move = board.move(pieceAt: Square(start), to: Square(end))
-    guard
-      uciMove.count == 5,
-      let move,
-      case .promotion = board.state
-    else {
-      return move
-    }
-
-    let promotionCode = uciMove.suffix(1)
-    let kind: Piece.Kind
-    switch promotionCode {
-    case "q": kind = .queen
-    case "r": kind = .rook
-    case "b": kind = .bishop
-    case "n": kind = .knight
-    default: kind = .queen
-    }
-    return board.completePromotion(of: move, to: kind)
   }
 
   private func updateClockState(state: GameStateEvent, meIsWhite: Bool, fallbackInitial: Int) {
@@ -968,115 +908,4 @@ final class LichessClientModel {
     }
     challenges[index].status = status
   }
-}
-
-private struct EventEnvelope: Decodable {
-  var type: String
-}
-
-private struct GameStartEvent: Decodable {
-  var game: StartedGame
-}
-
-private struct GameFinishEvent: Decodable {
-  var game: FinishedGame
-}
-
-private struct StartedGame: Decodable {
-  var gameId: String
-  var color: String
-  var lastMove: String?
-  var speed: String
-  var status: Status?
-  var opponent: Opponent
-  var isMyTurn: Bool
-  var secondsLeft: Int?
-}
-
-private struct FinishedGame: Decodable {
-  var gameId: String
-}
-
-private struct GameFullEvent: Decodable {
-  var id: String
-  var initialFen: String
-  var speed: String
-  var white: GamePlayer
-  var black: GamePlayer
-  var clock: GameClock?
-  var daysPerTurn: Int?
-  var state: GameStateEvent
-}
-
-private struct GamePlayer: Decodable {
-  var name: String
-  var rating: Int?
-}
-
-private struct GameClock: Decodable {
-  var initial: Int
-  var increment: Int
-}
-
-private struct GameStateEvent: Decodable {
-  var type: String?
-  var moves: String
-  var wtime: Int?
-  var btime: Int?
-  var status: String
-}
-
-private struct ChatLineEvent: Decodable {
-  var username: String
-  var text: String
-  var room: String
-
-  enum CodingKeys: String, CodingKey {
-    case username = "username"
-    case text
-    case room
-  }
-}
-
-private struct OpponentGoneEvent: Decodable {
-  var gone: Bool
-}
-
-private struct Status: Decodable {
-  var name: String
-}
-
-private struct Opponent: Decodable {
-  var id: String?
-  var username: String?
-  var rating: Int?
-}
-
-private struct ChallengeEvent: Decodable {
-  var challenge: IncomingChallenge
-}
-
-private struct IncomingChallenge: Decodable {
-  var id: String
-  var rated: Bool
-  var challenger: ChallengeUser
-  var destUser: ChallengeUser?
-  var timeControl: ChallengeTimeControl?
-}
-
-private struct ChallengeUser: Decodable {
-  var name: String
-  var rating: Int?
-}
-
-private struct ChallengeTimeControl: Decodable {
-  var show: String
-}
-
-private struct ChallengeCreateResponse: Decodable {
-  var challenge: CreatedChallenge
-}
-
-private struct CreatedChallenge: Decodable {
-  var id: String
 }

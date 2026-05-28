@@ -22,6 +22,7 @@ The app currently includes:
 - `ASSET_CREDITS.md` for board piece and sound resource attribution.
 - A `LichessBoardAPI` request builder for core Board API endpoints.
 - A first XCTest target covering Lichess request construction without making live network calls.
+- Pure parsing/reconstruction helpers for Lichess player NDJSON and board state.
 
 The app now has a mixed state:
 
@@ -176,6 +177,9 @@ The current implementation is split into:
 - `LichessClientModel`: app state, OAuth session handling, live Lichess networking, and stream reconciliation.
 - `LichessModels`: strongly typed app models and enums.
 - `LichessBoardAPI`: authenticated URL request construction for Board API calls and challenge flows.
+- `LichessPlayerParser`: pure parser for followed-player and online-bot NDJSON rows.
+- `LichessBoardPositionBuilder`: pure board reconstruction from `initialFen` plus Lichess UCI move history.
+- `LichessStreamEvents`: typed decoders for event-stream and game-stream JSON rows.
 - Challenge/following request builders for `GET /api/rel/following`, `GET /api/challenge`, direct challenge creation, accept, and decline.
 - Bot-play request builders for `GET /api/bot/online` and direct bot challenges through `POST /api/challenge/{username}`.
 - Reusable board files for themed rendering, asset loading, preview, and sounds.
@@ -201,6 +205,9 @@ Current coverage:
 - Direct challenge form encoding for followed players and bots.
 - Move submission, chat submission, abort, resign, challenge accept, and challenge decline request construction.
 - Online bot list request construction.
+- Followed-player and online-bot row parsing.
+- Event-stream and game-stream payload decoding for game start, full game state, chat, opponent presence, and challenges.
+- Board reconstruction from `startpos`, custom FEN, UCI move history, and promotion moves.
 
 These tests intentionally do not call the live Lichess API. Live pairing, bot challenges, and move submission can create real games and depend on account state, opponent availability, rate limits, and Lichess stream timing. Integration tests for those flows should use a dedicated test account and be kept separate from the default unit test suite.
 
@@ -211,7 +218,7 @@ These tests intentionally do not call the live Lichess API. Live pairing, bot ch
 3. Improve seek/challenge UX so pending bot and public match flows are clearer and more actionable.
 4. Improve event/game stream reconnect behavior and cancellation semantics.
 5. Replace the remaining ad hoc JSON parsing with stronger typed decoding.
-6. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction. Request construction tests are started.
+6. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction. Request construction, stream decoding, player parsing, and board reconstruction tests are started.
 
 ## Fair Play Requirements
 
