@@ -154,20 +154,29 @@ final class LichessClientModel {
     seekTask = Task { [weak self] in
       guard let self else { return }
       do {
-        let (_, response) = try await URLSession.shared.bytes(for: request)
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
         guard let http = response as? HTTPURLResponse else { return }
         if !(200..<300).contains(http.statusCode) {
           await self.handleSeekFailure(message: "Seek failed with status \(http.statusCode).")
           return
         }
 
-        while !Task.isCancelled {
-          try await Task.sleep(for: .seconds(1))
+        await self.recordEvent(title: "Seek opened", detail: preset.title, icon: "scope")
+        for try await _ in bytes.lines {
+          guard !Task.isCancelled else { return }
         }
+
+        guard !Task.isCancelled else { return }
+        await self.handleSeekFailure(message: "Seek closed before a game started. Try another preset or challenge a player directly.")
       } catch is CancellationError {
         return
       } catch {
-        await self.handleSeekFailure(message: error.localizedDescription)
+        let message = if let urlError = error as? URLError {
+          urlError.localizedDescription
+        } else {
+          error.localizedDescription
+        }
+        await self.handleSeekFailure(message: message)
       }
     }
     seekTimeoutTask = Task { [weak self] in

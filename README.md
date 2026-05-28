@@ -24,6 +24,7 @@ The app now has a mixed state:
 - Live OAuth sign-in and token revocation
 - Live event stream
 - Live public seek requests
+- Live public seek connection lifecycle, including seek-open and seek-close handling
 - Live direct challenges to followed players and online bot accounts
 - Live online bot list refresh
 - Live per-game board stream with clock, status, chat-line, and move-list updates
@@ -196,6 +197,7 @@ Post-game review can be considered later only if it is clearly separated from ac
 - Home screen starts with Play, not a chessboard.
 - Rapid seek preset buttons create real seek requests and can be canceled.
 - Public seeks stop after 90 seconds and show a failure event if no match is found.
+- Public seeks also report when the Lichess seek stream closes before a game starts.
 - Bot/following challenge buttons create real challenge requests.
 - Declined and canceled challenges update from the Lichess event stream.
 - A `gameStart` event opens the game screen.
