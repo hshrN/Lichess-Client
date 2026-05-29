@@ -9,11 +9,11 @@ enum ChessAssetImage {
       return image
     }
 
-    if let url = Bundle.main.url(forResource: assetName, withExtension: "png") {
+    if let url = Bundle.main.url(forResource: assetName, withExtension: "png", subdirectory: theme.resourceFolder) {
       return UIImage(contentsOfFile: url.path)
     }
 
-    if let url = Bundle.main.url(forResource: imageName, withExtension: "png", subdirectory: theme.resourceFolder) {
+    if let url = Bundle.main.url(forResource: assetName, withExtension: "png") {
       return UIImage(contentsOfFile: url.path)
     }
 

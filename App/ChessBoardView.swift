@@ -113,8 +113,9 @@ struct ChessBoardView: View {
   private func pieceImage(_ piece: Piece?, isSelected: Bool) -> some View {
     if let piece,
        let image = ChessAssetImage.uiImage(theme: pieceTheme, imageName: pieceTheme.imageName(for: piece)) {
-      Image(uiImage: image)
+      Image(uiImage: image.withRenderingMode(.alwaysOriginal))
         .resizable()
+        .renderingMode(.original)
         .interpolation(.high)
         .scaledToFit()
         .padding(4)
@@ -123,6 +124,7 @@ struct ChessBoardView: View {
     } else if let piece {
       Text(fallbackSymbol(for: piece))
         .font(.system(size: 28, weight: .semibold))
+        .foregroundStyle(piece.color == .white ? Color.white : Color.black)
         .minimumScaleFactor(0.7)
         .padding(4)
     }
