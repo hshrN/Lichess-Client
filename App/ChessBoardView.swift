@@ -121,8 +121,16 @@ struct ChessBoardView: View {
 
   private func boardContent(squareLength: CGFloat, gutterLength: CGFloat) -> some View {
     VStack {
-      Color.clear
-        .frame(height: gutterLength)
+      HStack(spacing: 0) {
+        Color.clear
+          .frame(width: gutterLength)
+
+        fileLabels(squareLength: squareLength, gutterLength: gutterLength)
+
+        Color.clear
+          .frame(width: gutterLength)
+      }
+      .frame(height: gutterLength)
 
       HStack(spacing: 0) {
         rankLabels(squareLength: squareLength, gutterLength: gutterLength)
@@ -139,7 +147,7 @@ struct ChessBoardView: View {
           }
         }
 
-        Color.clear
+        rankLabels(squareLength: squareLength, gutterLength: gutterLength)
           .frame(width: gutterLength)
       }
 
