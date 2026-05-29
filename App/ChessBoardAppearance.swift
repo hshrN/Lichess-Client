@@ -7,6 +7,7 @@ enum PieceTheme: String, CaseIterable, Identifiable {
   case fantasy
   case spatial
   case celtic
+  case sashite
 
   var id: String { rawValue }
 
@@ -17,6 +18,7 @@ enum PieceTheme: String, CaseIterable, Identifiable {
     case .fantasy: "Fantasy"
     case .spatial: "Spatial"
     case .celtic: "Celtic"
+    case .sashite: "Sashite"
     }
   }
 
@@ -27,6 +29,7 @@ enum PieceTheme: String, CaseIterable, Identifiable {
     case .fantasy: "Pieces/Fantasy"
     case .spatial: "Pieces/Spatial"
     case .celtic: "Pieces/Celtic"
+    case .sashite: "Pieces/Sashite"
     }
   }
 
@@ -37,6 +40,7 @@ enum PieceTheme: String, CaseIterable, Identifiable {
     case .fantasy: "fantasy_"
     case .spatial: "spatial_"
     case .celtic: "celtic_"
+    case .sashite: "sashite_"
     }
   }
 

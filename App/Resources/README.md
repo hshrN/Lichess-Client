@@ -9,6 +9,7 @@ Expected piece image paths use this pattern for each theme:
 - `App/Resources/Pieces/Fantasy/fantasy_wK.png`
 - `App/Resources/Pieces/Spatial/spatial_wK.png`
 - `App/Resources/Pieces/Celtic/celtic_wK.png`
+- `App/Resources/Pieces/Sashite/sashite_wK.png`
 
 Each theme includes `wK`, `wQ`, `wR`, `wB`, `wN`, `wP`, `bK`, `bQ`, `bR`, `bB`, `bN`, and `bP`.
 

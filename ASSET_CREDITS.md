@@ -13,6 +13,15 @@ Last updated: 2026-05-28
   - https://raw.githubusercontent.com/lichess-org/lila/master/COPYING.md
   - https://rhosgfx.itch.io/vector-chess-pieces
 
+### Sashite
+
+- Source: https://sashite.dev/assets/chess/
+- Upstream author: Cyril Kato / Sashite
+- License: CC0 1.0
+- License confirmation:
+  - https://sashite.dev/assets/chess/
+  - https://creativecommons.org/publicdomain/zero/1.0/
+
 ### Staunton
 
 - Source: https://github.com/clarkerubber/Staunton-Pieces/tree/master/Renders/Basic/Scaled
