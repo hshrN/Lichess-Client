@@ -22,6 +22,33 @@ Last updated: 2026-05-28
   - https://github.com/clarkerubber/Staunton-Pieces/blob/master/LICENSE
   - https://raw.githubusercontent.com/lichess-org/lila/master/COPYING.md
 
+### Fantasy
+
+- Source: https://github.com/lichess-org/lila/tree/master/public/piece/fantasy
+- Upstream author: Maurizio Monge
+- License: MIT
+- License confirmation:
+  - https://github.com/maurimo/chess-art/blob/main/LICENSE
+  - https://raw.githubusercontent.com/lichess-org/lila/master/COPYING.md
+
+### Spatial
+
+- Source: https://github.com/lichess-org/lila/tree/master/public/piece/spatial
+- Upstream author: Maurizio Monge
+- License: MIT
+- License confirmation:
+  - https://github.com/maurimo/chess-art/blob/main/LICENSE
+  - https://raw.githubusercontent.com/lichess-org/lila/master/COPYING.md
+
+### Celtic
+
+- Source: https://github.com/lichess-org/lila/tree/master/public/piece/celtic
+- Upstream author: Maurizio Monge
+- License: MIT
+- License confirmation:
+  - https://github.com/maurimo/chess-art/blob/main/LICENSE
+  - https://raw.githubusercontent.com/lichess-org/lila/master/COPYING.md
+
 ## Sound Effects
 
 ### Move

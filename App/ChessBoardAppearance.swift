@@ -4,6 +4,9 @@ import SwiftUI
 enum PieceTheme: String, CaseIterable, Identifiable {
   case rhosgfx
   case staunton
+  case fantasy
+  case spatial
+  case celtic
 
   var id: String { rawValue }
 
@@ -11,6 +14,9 @@ enum PieceTheme: String, CaseIterable, Identifiable {
     switch self {
     case .rhosgfx: "Rhosgfx"
     case .staunton: "Staunton"
+    case .fantasy: "Fantasy"
+    case .spatial: "Spatial"
+    case .celtic: "Celtic"
     }
   }
 
@@ -18,6 +24,9 @@ enum PieceTheme: String, CaseIterable, Identifiable {
     switch self {
     case .rhosgfx: "Pieces/Rhosgfx"
     case .staunton: "Pieces/Staunton"
+    case .fantasy: "Pieces/Fantasy"
+    case .spatial: "Pieces/Spatial"
+    case .celtic: "Pieces/Celtic"
     }
   }
 
@@ -25,6 +34,9 @@ enum PieceTheme: String, CaseIterable, Identifiable {
     switch self {
     case .rhosgfx: "rhosgfx_"
     case .staunton: "staunton_"
+    case .fantasy: "fantasy_"
+    case .spatial: "spatial_"
+    case .celtic: "celtic_"
     }
   }
 
