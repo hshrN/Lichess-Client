@@ -11,20 +11,26 @@ struct ChessBoardView: View {
   @AppStorage(AppPreferences.boardStyleKey) private var boardStyleRawValue = BoardStyle.walnut.rawValue
 
   var body: some View {
-    ZStack {
-      boardStyle.frameGradient
+    GeometryReader { proxy in
+      let boardLength = min(proxy.size.width, proxy.size.height)
+      let framePadding = max(6, boardLength * 0.025)
+      let squareLength = (boardLength - framePadding * 2) / 8
 
-      VStack(spacing: 0) {
-        ForEach(0..<8, id: \.self) { row in
-          HStack(spacing: 0) {
-            ForEach(0..<8, id: \.self) { column in
-              let square = state.orderedSquares[row * 8 + column]
-              squareView(square)
+      ZStack {
+        boardStyle.frameGradient
+
+        VStack(spacing: 0) {
+          ForEach(0..<8, id: \.self) { row in
+            HStack(spacing: 0) {
+              ForEach(0..<8, id: \.self) { column in
+                let square = state.orderedSquares[row * 8 + column]
+                squareView(square, length: squareLength)
+              }
             }
           }
         }
+        .padding(framePadding)
       }
-      .padding(10)
     }
     .aspectRatio(1, contentMode: .fit)
     .clipShape(.rect(cornerRadius: 8))
@@ -50,7 +56,7 @@ struct ChessBoardView: View {
     .animation(.smooth(duration: 0.18), value: state.legalTargets)
   }
 
-  private func squareView(_ square: Square) -> some View {
+  private func squareView(_ square: Square, length: CGFloat) -> some View {
     let piece = state.piece(at: square)
     let isSelected = state.selectedSquare == square
     let isTarget = state.legalTargets.contains(square)
@@ -94,8 +100,10 @@ struct ChessBoardView: View {
         pieceImage(piece, isSelected: isSelected)
         coordinateLabel(for: square)
       }
-      .aspectRatio(1, contentMode: .fit)
+      .frame(width: length, height: length)
+      .contentShape(.rect)
     }
+    .frame(width: length, height: length)
     .buttonStyle(.plain)
     .sensoryFeedback(.selection, trigger: state.selectedSquare == square)
     .accessibilityLabel(accessibilityLabel(square: square, piece: piece, isTarget: isTarget))

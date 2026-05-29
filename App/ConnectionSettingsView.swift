@@ -67,6 +67,29 @@ struct ConnectionSettingsView: View {
 
       Divider()
 
+      ViewThatFits(in: .horizontal) {
+        HStack(alignment: .top, spacing: 16) {
+          customizationControls
+          boardPreview
+        }
+
+        VStack(alignment: .leading, spacing: 14) {
+          boardPreview
+            .frame(maxWidth: .infinity, alignment: .center)
+          customizationControls
+        }
+      }
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+  }
+
+  private var customizationControls: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Board")
+        .font(.headline)
+
       Picker("Appearance", selection: $appearanceModeRaw) {
         ForEach(AppearanceMode.allCases) { mode in
           Text(mode.title).tag(mode.rawValue)
@@ -90,9 +113,12 @@ struct ConnectionSettingsView: View {
 
       Toggle("Sounds", isOn: $soundEnabled)
     }
-    .padding(14)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+    .frame(minWidth: 230, maxWidth: .infinity, alignment: .leading)
+  }
+
+  private var boardPreview: some View {
+    ChessBoardPreviewView()
+      .frame(width: 178)
   }
 }
 

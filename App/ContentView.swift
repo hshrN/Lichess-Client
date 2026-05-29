@@ -47,9 +47,11 @@ struct ContentView: View {
       }
       .sheet(isPresented: $showingSettings) {
         NavigationStack {
-          ConnectionSettingsView(model: model)
-            .padding()
-            .background(Color(.systemGroupedBackground))
+          ScrollView {
+            ConnectionSettingsView(model: model)
+              .padding()
+          }
+          .background(Color(.systemGroupedBackground))
             .navigationTitle("Lichess Account")
             .toolbar {
               ToolbarItem(placement: .topBarTrailing) {
