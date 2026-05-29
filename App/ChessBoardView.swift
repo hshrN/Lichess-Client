@@ -13,23 +13,13 @@ struct ChessBoardView: View {
   var body: some View {
     GeometryReader { proxy in
       let boardLength = min(proxy.size.width, proxy.size.height)
-      let framePadding = max(6, boardLength * 0.025)
-      let squareLength = (boardLength - framePadding * 2) / 8
+      let gutterLength = max(14, boardLength * 0.052)
+      let squareLength = (boardLength - gutterLength * 2) / 8
 
       ZStack {
         boardStyle.frameGradient
 
-        VStack(spacing: 0) {
-          ForEach(0..<8, id: \.self) { row in
-            HStack(spacing: 0) {
-              ForEach(0..<8, id: \.self) { column in
-                let square = state.orderedSquares[row * 8 + column]
-                squareView(square, length: squareLength)
-              }
-            }
-          }
-        }
-        .padding(framePadding)
+        boardContent(squareLength: squareLength, gutterLength: gutterLength)
       }
     }
     .aspectRatio(1, contentMode: .fit)
@@ -98,7 +88,6 @@ struct ChessBoardView: View {
         }
 
         pieceImage(piece, isSelected: isSelected)
-        coordinateLabel(for: square)
       }
       .frame(width: length, height: length)
       .contentShape(.rect)
@@ -130,27 +119,67 @@ struct ChessBoardView: View {
     }
   }
 
-  private func coordinateLabel(for square: Square) -> some View {
+  private func boardContent(squareLength: CGFloat, gutterLength: CGFloat) -> some View {
     VStack {
-      Spacer()
-      HStack {
-        if showFile(for: square) {
-          Text(square.file.rawValue)
-            .font(.system(size: 9, weight: .medium, design: .rounded))
-            .foregroundStyle(boardStyle.coordinateColor)
-            .padding(4)
+      Color.clear
+        .frame(height: gutterLength)
+
+      HStack(spacing: 0) {
+        rankLabels(squareLength: squareLength, gutterLength: gutterLength)
+          .frame(width: gutterLength)
+
+        VStack(spacing: 0) {
+          ForEach(0..<8, id: \.self) { row in
+            HStack(spacing: 0) {
+              ForEach(0..<8, id: \.self) { column in
+                let square = state.orderedSquares[row * 8 + column]
+                squareView(square, length: squareLength)
+              }
+            }
+          }
         }
-        Spacer()
+
+        Color.clear
+          .frame(width: gutterLength)
       }
+
+      HStack(spacing: 0) {
+        Color.clear
+          .frame(width: gutterLength)
+
+        fileLabels(squareLength: squareLength, gutterLength: gutterLength)
+
+        Color.clear
+          .frame(width: gutterLength)
+      }
+      .frame(height: gutterLength)
     }
-    .overlay(alignment: .topTrailing) {
-      if showRank(for: square) {
-        Text("\(square.rank.value)")
-          .font(.system(size: 9, weight: .medium, design: .rounded))
+  }
+
+  private func rankLabels(squareLength: CGFloat, gutterLength: CGFloat) -> some View {
+    VStack(spacing: 0) {
+      ForEach(displayRanks, id: \.self) { rank in
+        Text("\(rank)")
+          .font(coordinateFont)
           .foregroundStyle(boardStyle.coordinateColor)
-          .padding(4)
+          .frame(width: gutterLength, height: squareLength)
       }
     }
+  }
+
+  private func fileLabels(squareLength: CGFloat, gutterLength: CGFloat) -> some View {
+    HStack(spacing: 0) {
+      ForEach(displayFiles, id: \.self) { file in
+        Text(file.rawValue)
+          .font(coordinateFont)
+          .foregroundStyle(boardStyle.coordinateColor)
+          .frame(width: squareLength, height: gutterLength)
+      }
+    }
+  }
+
+  private var coordinateFont: Font {
+    .system(size: 10, weight: .semibold, design: .rounded)
   }
 
   private var pieceTheme: PieceTheme {
@@ -161,12 +190,13 @@ struct ChessBoardView: View {
     BoardStyle(rawValue: boardStyleRawValue) ?? .walnut
   }
 
-  private func showFile(for square: Square) -> Bool {
-    state.isFlipped ? square.rank.value == 8 : square.rank.value == 1
+  private var displayFiles: [Square.File] {
+    let files = (1...8).map(Square.File.init)
+    return state.isFlipped ? Array(files.reversed()) : files
   }
 
-  private func showRank(for square: Square) -> Bool {
-    state.isFlipped ? square.file == .h : square.file == .a
+  private var displayRanks: [Int] {
+    state.isFlipped ? Array(1...8) : Array((1...8).reversed())
   }
 
   private func accessibilityLabel(square: Square, piece: Piece?, isTarget: Bool) -> String {
