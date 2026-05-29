@@ -110,4 +110,40 @@ final class LichessParsingTests: XCTestCase {
     XCTAssertEqual(promotedPiece?.color, .white)
     XCTAssertEqual(promotedPiece?.kind, .queen)
   }
+
+  func testOutgoingMoveUCIRejectsIllegalMove() {
+    let board = Board()
+
+    let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: Square("e2"),
+      to: Square("e5"),
+      on: board
+    )
+
+    XCTAssertNil(move)
+  }
+
+  func testOutgoingMoveUCIReturnsLegalMove() {
+    let board = Board()
+
+    let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: Square("e2"),
+      to: Square("e4"),
+      on: board
+    )
+
+    XCTAssertEqual(move, "e2e4")
+  }
+
+  func testOutgoingMoveUCIAddsPromotionSuffix() {
+    let board = Board(position: Position(fen: "4k3/P7/8/8/8/8/8/4K3 w - - 0 1")!)
+
+    let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: Square("a7"),
+      to: Square("a8"),
+      on: board
+    )
+
+    XCTAssertEqual(move, "a7a8q")
+  }
 }

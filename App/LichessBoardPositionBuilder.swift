@@ -59,4 +59,20 @@ enum LichessBoardPositionBuilder {
     }
     return board.completePromotion(of: move, to: kind)
   }
+
+  static func outgoingMoveUCI(from start: Square, to end: Square, on board: Board) -> String? {
+    var board = board
+    let base = "\(start.notation)\(end.notation)"
+
+    guard let move = board.move(pieceAt: start, to: end) else {
+      return nil
+    }
+
+    guard case .promotion = board.state else {
+      return base
+    }
+
+    _ = board.completePromotion(of: move, to: .queen)
+    return "\(base)q"
+  }
 }

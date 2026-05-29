@@ -461,7 +461,7 @@ final class LichessClientModel {
 
     let start = Square(selectedSquare.uci)
     let end = Square(square.uci)
-    guard board.canMove(pieceAt: start, to: end) else {
+    guard let move = LichessBoardPositionBuilder.outgoingMoveUCI(from: start, to: end, on: board) else {
       events.insert(
         LichessEvent(title: "Illegal move", detail: "\(selectedSquare.uci)\(square.uci)", systemImage: "exclamationmark.triangle"),
         at: 0
@@ -477,7 +477,6 @@ final class LichessClientModel {
       return
     }
 
-    let move = outgoingMove(from: selectedSquare, to: square)
     isSubmittingMove = true
     events.insert(
       LichessEvent(title: "Sending move", detail: move, systemImage: "arrow.up.right.square"),
@@ -980,18 +979,6 @@ final class LichessClientModel {
 
   private func formatMilliseconds(_ milliseconds: Int) -> String {
     formatSeconds(max(milliseconds / 1000, 0))
-  }
-
-  private func outgoingMove(from start: BoardSquare, to end: BoardSquare) -> String {
-    let base = "\(start.uci)\(end.uci)"
-    guard
-      let piece = board.position.piece(at: Square(start.uci)),
-      piece.kind == .pawn,
-      (piece.color == .white && end.rank == 7) || (piece.color == .black && end.rank == 0)
-    else {
-      return base
-    }
-    return "\(base)q"
   }
 
   private func chessSquare(_ square: BoardSquare) -> Square {
