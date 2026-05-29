@@ -41,6 +41,7 @@ final class LichessClientModel {
   var canClaimVictory = false
   var canClaimDraw = false
   private var activeInitialFEN: String?
+  private var pendingSubmittedMove: String?
   private var eventStreamTask: Task<Void, Never>?
   private var seekTask: Task<Void, Never>?
   private var gameStreamTask: Task<Void, Never>?
@@ -495,6 +496,7 @@ final class LichessClientModel {
           return
         }
         await MainActor.run {
+          self.applyConfirmedLocalMove(move)
           self.isSubmittingMove = false
         }
       } catch {
@@ -952,8 +954,14 @@ final class LichessClientModel {
     activeGame.moves = result.moves
     activeGame.lastMove = result.lastMove
     activeGame.isMyTurn = board.position.sideToMove == (activeGame.myColor.lowercased() == "white" ? .white : .black)
+    if pendingSubmittedMove == result.lastMove {
+      pendingSubmittedMove = nil
+    }
 
-    if hasLoadedGameState, result.moves.count > previousMoveCount, let lastAppliedMove = result.lastAppliedMove {
+    if hasLoadedGameState,
+       result.moves.count > previousMoveCount,
+       let lastAppliedMove = result.lastAppliedMove,
+       pendingSubmittedMove != result.lastMove {
       ChessSoundPlayer.shared.play(for: lastAppliedMove)
     }
   }
@@ -979,6 +987,27 @@ final class LichessClientModel {
 
   private func formatMilliseconds(_ milliseconds: Int) -> String {
     formatSeconds(max(milliseconds / 1000, 0))
+  }
+
+  func applyConfirmedLocalMoveForTesting(_ move: String) {
+    applyConfirmedLocalMove(move)
+  }
+
+  private func applyConfirmedLocalMove(_ move: String) {
+    guard hasLoadedGameState else {
+      return
+    }
+
+    var confirmedBoard = board
+    guard LichessBoardPositionBuilder.apply(uciMove: move, to: &confirmedBoard) != nil else {
+      return
+    }
+
+    pendingSubmittedMove = move
+    board = confirmedBoard
+    activeGame.moves.append(move)
+    activeGame.lastMove = move
+    activeGame.isMyTurn = board.position.sideToMove == (activeGame.myColor.lowercased() == "white" ? .white : .black)
   }
 
   private func chessSquare(_ square: BoardSquare) -> Square {
