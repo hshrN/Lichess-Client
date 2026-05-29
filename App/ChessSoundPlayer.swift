@@ -1,4 +1,5 @@
 import AVFoundation
+import AudioToolbox
 import ChessKit
 import Foundation
 
@@ -7,6 +8,11 @@ final class ChessSoundPlayer {
   static let shared = ChessSoundPlayer()
 
   private var players: [String: AVAudioPlayer] = [:]
+  private let fallbackSystemSounds: [String: SystemSoundID] = [
+    "move": 1104,
+    "capture": 1157,
+    "check": 1114
+  ]
 
   func play(for move: Move) {
     guard AppPreferences.soundEnabled else {
@@ -36,6 +42,7 @@ final class ChessSoundPlayer {
     } else {
       guard let url = Bundle.main.url(forResource: "Sounds/\(name)", withExtension: "mp3"),
             let newPlayer = try? AVAudioPlayer(contentsOf: url) else {
+        playFallback(named: name)
         return
       }
       newPlayer.prepareToPlay()
@@ -45,5 +52,12 @@ final class ChessSoundPlayer {
 
     player.currentTime = 0
     player.play()
+  }
+
+  private func playFallback(named name: String) {
+    guard let soundID = fallbackSystemSounds[name] else {
+      return
+    }
+    AudioServicesPlaySystemSound(soundID)
   }
 }
