@@ -31,6 +31,7 @@ The app now has a mixed state:
 - Live public seek requests
 - Live public seek connection lifecycle, including seek-open and seek-close handling
 - Live direct challenges to followed players and online bot accounts
+- Direct challenges now use their own pending state, separate from public rapid seek
 - Live challenge accept and decline requests
 - Live online bot list refresh
 - Live per-game board stream with clock, status, chat-line, and move-list updates
@@ -206,6 +207,7 @@ Current coverage:
 - Board event stream request construction.
 - Per-game stream request construction.
 - Public rapid seek form encoding, including omitting `color` for random seeks.
+- Public seek and direct-challenge flows are intentionally separated in UI state.
 - Direct challenge form encoding for followed players and bots.
 - Move submission, chat submission, abort, resign, challenge accept, and challenge decline request construction.
 - Draw, takeback, claim-victory, claim-draw, and berserk request construction.

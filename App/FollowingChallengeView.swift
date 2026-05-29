@@ -59,7 +59,10 @@ struct FollowingChallengeView: View {
 
           Spacer()
 
-          Button("10+5", systemImage: "paperplane.fill") {
+          Button(
+            model.pendingDirectChallengeOpponent == player.username ? "Waiting…" : "10+5",
+            systemImage: "paperplane.fill"
+          ) {
             if model.isConfigured {
               Task {
                 await model.challenge(player)
@@ -71,6 +74,7 @@ struct FollowingChallengeView: View {
           .labelStyle(.titleAndIcon)
           .font(.caption.weight(.semibold))
           .buttonStyle(.bordered)
+          .disabled(model.isSendingDirectChallenge)
         }
         .padding(12)
         .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))

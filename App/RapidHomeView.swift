@@ -121,6 +121,7 @@ private struct PlayControlPanel: View {
       }
       .buttonStyle(.borderedProminent)
       .controlSize(.large)
+      .disabled(model.isSendingDirectChallenge)
 
       if model.isSearching {
         HStack(spacing: 12) {
@@ -133,6 +134,14 @@ private struct PlayControlPanel: View {
             model.cancelSeek()
           }
           .font(.subheadline.weight(.semibold))
+        }
+      } else if let pendingLabel = model.pendingDirectChallengeLabel {
+        HStack(spacing: 12) {
+          ProgressView()
+          Text("Waiting for \(pendingLabel) to start.")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+          Spacer()
         }
       }
     }
@@ -225,7 +234,10 @@ private struct BotPlayPanel: View {
 
             Spacer()
 
-            Button("Challenge", systemImage: "paperplane.fill") {
+            Button(
+              model.pendingDirectChallengeOpponent == bot.username ? "Waiting…" : "Challenge",
+              systemImage: "paperplane.fill"
+            ) {
               if model.isConfigured {
                 Task {
                   await model.challengeBot(bot)
@@ -236,6 +248,7 @@ private struct BotPlayPanel: View {
             }
             .font(.caption.weight(.semibold))
             .buttonStyle(.bordered)
+            .disabled(model.isSendingDirectChallenge)
           }
           .padding(12)
           .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
