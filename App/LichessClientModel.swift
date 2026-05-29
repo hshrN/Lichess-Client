@@ -4,6 +4,11 @@ import ChessKit
 @Observable
 @MainActor
 final class LichessClientModel {
+  enum PendingDirectChallengeKind {
+    case player
+    case bot
+  }
+
   var accessToken = ""
   var accountUsername = ""
   var streamState = StreamConnectionState.disconnected
@@ -31,6 +36,7 @@ final class LichessClientModel {
   var isSendingDirectChallenge = false
   var pendingDirectChallengeOpponent: String?
   var pendingDirectChallengeLabel: String?
+  var pendingDirectChallengeKind: PendingDirectChallengeKind?
   var opponentPresenceMessage: String?
   var canClaimVictory = false
   var canClaimDraw = false
@@ -139,6 +145,7 @@ final class LichessClientModel {
     isSendingDirectChallenge = false
     pendingDirectChallengeOpponent = nil
     pendingDirectChallengeLabel = nil
+    pendingDirectChallengeKind = nil
     events.insert(
       LichessEvent(title: "Signed out", detail: "Lichess authorization removed.", systemImage: "person.crop.circle.badge.xmark"),
       at: 0
@@ -306,7 +313,7 @@ final class LichessClientModel {
       return
     }
 
-    await sendChallenge(username: player.username, rating: player.rapidRating ?? 1500, preset: preset, icon: "paperplane")
+    await sendChallenge(username: player.username, rating: player.rapidRating ?? 1500, preset: preset, icon: "paperplane", kind: .player)
   }
 
   func refreshOnlineBots() async {
@@ -361,7 +368,7 @@ final class LichessClientModel {
     }
 
     let chosenPreset = preset ?? selectedSeekPreset
-    await sendChallenge(username: bot.username, rating: bot.rating ?? 1500, preset: chosenPreset, icon: "cpu")
+    await sendChallenge(username: bot.username, rating: bot.rating ?? 1500, preset: chosenPreset, icon: "cpu", kind: .bot)
   }
 
   func openPreviewGame() {
@@ -378,6 +385,7 @@ final class LichessClientModel {
     isSendingDirectChallenge = false
     pendingDirectChallengeOpponent = nil
     pendingDirectChallengeLabel = nil
+    pendingDirectChallengeKind = nil
     selectedSquare = nil
     activeInitialFEN = nil
     opponentPresenceMessage = nil
@@ -661,10 +669,23 @@ final class LichessClientModel {
     switch envelope.type {
     case "gameStart":
       guard let event = try? JSONDecoder().decode(GameStartEvent.self, from: data) else { return }
+      let startedOpponent = event.game.opponent.username ?? event.game.opponent.id
+      if pendingDirectChallengeKind == .bot, pendingDirectChallengeOpponent == startedOpponent {
+        isSendingDirectChallenge = false
+        pendingDirectChallengeOpponent = nil
+        pendingDirectChallengeLabel = nil
+        pendingDirectChallengeKind = nil
+        events.insert(
+          LichessEvent(title: "Bot challenge ignored", detail: startedOpponent ?? "Bot", systemImage: "cpu"),
+          at: 0
+        )
+        return
+      }
       isSearching = false
       isSendingDirectChallenge = false
       pendingDirectChallengeOpponent = nil
       pendingDirectChallengeLabel = nil
+      pendingDirectChallengeKind = nil
       seekTask?.cancel()
       seekTask = nil
       seekTimeoutTask?.cancel()
@@ -718,6 +739,7 @@ final class LichessClientModel {
         isSendingDirectChallenge = false
         pendingDirectChallengeOpponent = nil
         pendingDirectChallengeLabel = nil
+        pendingDirectChallengeKind = nil
       }
       events.insert(
         LichessEvent(title: "Challenge declined", detail: event.challenge.destUser?.name ?? event.challenge.challenger.name, systemImage: "xmark.circle"),
@@ -730,6 +752,7 @@ final class LichessClientModel {
         isSendingDirectChallenge = false
         pendingDirectChallengeOpponent = nil
         pendingDirectChallengeLabel = nil
+        pendingDirectChallengeKind = nil
       }
       events.insert(
         LichessEvent(title: "Challenge canceled", detail: event.challenge.destUser?.name ?? event.challenge.challenger.name, systemImage: "xmark.circle"),
@@ -746,7 +769,13 @@ final class LichessClientModel {
     }
   }
 
-  private func sendChallenge(username: String, rating: Int, preset: SeekPreset, icon: String) async {
+  private func sendChallenge(
+    username: String,
+    rating: Int,
+    preset: SeekPreset,
+    icon: String,
+    kind: PendingDirectChallengeKind
+  ) async {
     guard !isSendingDirectChallenge else {
       events.insert(
         LichessEvent(title: "Challenge pending", detail: pendingDirectChallengeLabel ?? "Wait for the current challenge to resolve.", systemImage: "clock"),
@@ -758,6 +787,7 @@ final class LichessClientModel {
     isSendingDirectChallenge = true
     pendingDirectChallengeOpponent = username
     pendingDirectChallengeLabel = "\(username) • \(preset.title)"
+    pendingDirectChallengeKind = kind
 
     do {
       let (data, response) = try await URLSession.shared.data(for: api.challengeRequest(username: username, preset: preset))
@@ -766,6 +796,7 @@ final class LichessClientModel {
         isSendingDirectChallenge = false
         pendingDirectChallengeOpponent = nil
         pendingDirectChallengeLabel = nil
+        pendingDirectChallengeKind = nil
         events.insert(
           LichessEvent(title: "Challenge failed", detail: message, systemImage: "exclamationmark.triangle"),
           at: 0
@@ -794,6 +825,7 @@ final class LichessClientModel {
       isSendingDirectChallenge = false
       pendingDirectChallengeOpponent = nil
       pendingDirectChallengeLabel = nil
+      pendingDirectChallengeKind = nil
       events.insert(
         LichessEvent(title: "Challenge failed", detail: error.localizedDescription, systemImage: "exclamationmark.triangle"),
         at: 0

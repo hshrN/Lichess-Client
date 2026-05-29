@@ -11,7 +11,6 @@ The app currently includes:
 - A reusable themed chessboard component with image piece themes, board styles, coordinates, selected/legal/last-move/check highlights, flipping, and a preview view.
 - Rapid-only seek presets that map to Lichess Board API seeks.
 - Following list and direct challenge UI for players the user follows.
-- Bot play panel for challenging online bot accounts.
 - Challenge inbox preview for incoming/outgoing challenge state.
 - A board screen that appears only after a search/game starts.
 - Player and spectator chat UI.
@@ -30,10 +29,9 @@ The app now has a mixed state:
 - Live event stream
 - Live public seek requests
 - Live public seek connection lifecycle, including seek-open and seek-close handling
-- Live direct challenges to followed players and online bot accounts
+- Live direct challenges to followed players
 - Direct challenges now use their own pending state, separate from public rapid seek
 - Live challenge accept and decline requests
-- Live online bot list refresh
 - Live per-game board stream with clock, status, chat-line, and move-list updates
 - Game-state updates preserve the `gameFull.initialFen` when replaying later `gameState` move lists.
 - Opponent-away game stream updates are surfaced with claim win/draw affordances when Lichess reports they are available.
@@ -116,7 +114,6 @@ Primary endpoints planned for the app:
 - `POST /api/challenge/{username}`
 - `POST /api/challenge/{challengeId}/accept`
 - `POST /api/challenge/{challengeId}/decline`
-- `GET /api/bot/online`
 
 The global event stream should be opened before creating real-time seeks so the app does not miss a fast game-start event.
 The app now opens the event stream and transitions into a game screen on `gameStart`, then opens the per-game stream and rebuilds the board from `initialFen` plus UCI move history.
@@ -182,11 +179,10 @@ The current implementation is split into:
 - `LichessClientModel`: app state, OAuth session handling, live Lichess networking, and stream reconciliation.
 - `LichessModels`: strongly typed app models and enums.
 - `LichessBoardAPI`: authenticated URL request construction for Board API calls and challenge flows.
-- `LichessPlayerParser`: pure parser for followed-player and online-bot NDJSON rows.
+- `LichessPlayerParser`: pure parser for followed-player NDJSON rows, with bot parsing support kept off the main rapid flow.
 - `LichessBoardPositionBuilder`: pure board reconstruction from `initialFen` plus Lichess UCI move history.
 - `LichessStreamEvents`: typed decoders for event-stream and game-stream JSON rows.
 - Challenge/following request builders for `GET /api/rel/following`, `GET /api/challenge`, direct challenge creation, accept, and decline.
-- Bot-play request builders for `GET /api/bot/online` and direct bot challenges through `POST /api/challenge/{username}`.
 - Reusable board files for themed rendering, asset loading, preview, and sounds.
 - SwiftUI screen files for the board, pairing, challenges, settings, and header.
 
@@ -208,22 +204,21 @@ Current coverage:
 - Per-game stream request construction.
 - Public rapid seek form encoding, including omitting `color` for random seeks.
 - Public seek and direct-challenge flows are intentionally separated in UI state.
-- Direct challenge form encoding for followed players and bots.
+- Direct challenge form encoding for followed players.
 - Move submission, chat submission, abort, resign, challenge accept, and challenge decline request construction.
 - Draw, takeback, claim-victory, claim-draw, and berserk request construction.
-- Online bot list request construction.
-- Followed-player and online-bot row parsing.
+- Followed-player parsing.
 - Event-stream and game-stream payload decoding for game start, full game state, chat, opponent presence, and challenges.
 - Board reconstruction from `startpos`, custom FEN, UCI move history, and promotion moves.
 - Regression coverage for preserving non-standard initial positions during game stream updates.
 
-These tests intentionally do not call the live Lichess API. Live pairing, bot challenges, and move submission can create real games and depend on account state, opponent availability, rate limits, and Lichess stream timing. Integration tests for those flows should use a dedicated test account and be kept separate from the default unit test suite.
+These tests intentionally do not call the live Lichess API. Live pairing, challenges, and move submission can create real games and depend on account state, opponent availability, rate limits, and Lichess stream timing. Integration tests for those flows should use a dedicated test account and be kept separate from the default unit test suite.
 
 ## Implementation Milestones
 
 1. Add draw, takeback, claim, and berserk actions to the live game UI. Done for action submission; offer-state UI can be improved later.
 2. Add promotion choice UI instead of defaulting promotions to queen.
-3. Improve seek/challenge UX so pending bot and public match flows are clearer and more actionable.
+3. Improve rapid seek and player challenge UX.
 4. Improve event/game stream reconnect behavior and cancellation semantics.
 5. Replace the remaining ad hoc JSON parsing with stronger typed decoding.
 6. Add focused unit tests for request construction, NDJSON parsing, and game-state reduction. Request construction, stream decoding, player parsing, and board reconstruction tests are started.
@@ -252,7 +247,7 @@ Post-game review can be considered later only if it is clearly separated from ac
 - Public seeks stop after 90 seconds and show a failure event if no match is found.
 - Public seeks also report when the Lichess seek stream closes before a game starts.
 - Starting a public seek restarts the event stream first, then opens the seek stream.
-- Bot/following challenge buttons create real challenge requests.
+- Following challenge buttons create real challenge requests.
 - Declined and canceled challenges update from the Lichess event stream.
 - A `gameStart` event opens the game screen.
 - `gameFull` and `gameState` update the board, clocks, and status.
