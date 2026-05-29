@@ -191,8 +191,7 @@ final class LichessClientModel {
     selectedSeekPreset = preset
     seekTask?.cancel()
     seekTimeoutTask?.cancel()
-    startEventStreamIfNeeded(forceRestart: true)
-    try? await Task.sleep(for: .milliseconds(500))
+    startEventStreamIfNeeded()
     isSearching = true
     streamState = .connected
     events.insert(
@@ -221,7 +220,7 @@ final class LichessClientModel {
         }
 
         guard !Task.isCancelled else { return }
-        await self.handleSeekFailure(message: "Seek closed before a game started. Try another preset or challenge a player directly.")
+        await self.handleSeekClosure()
       } catch is CancellationError {
         return
       } catch {
@@ -843,6 +842,23 @@ final class LichessClientModel {
       LichessEvent(title: "Seek ended", detail: message, systemImage: "exclamationmark.triangle"),
       at: 0
     )
+  }
+
+  private func handleSeekClosure() async {
+    seekTask = nil
+
+    do {
+      try await Task.sleep(for: .seconds(3))
+    } catch is CancellationError {
+      return
+    } catch {
+      return
+    }
+
+    guard isSearching, !isInGame else {
+      return
+    }
+    handleSeekFailure(message: "Seek closed before a gameStart event arrived. Try again or challenge a player directly.")
   }
 
   private func recordEvent(title: String, detail: String, icon: String) {
