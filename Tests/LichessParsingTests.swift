@@ -146,4 +146,64 @@ final class LichessParsingTests: XCTestCase {
 
     XCTAssertEqual(move, "a7a8q")
   }
+
+  func testOutgoingMoveUCIReturnsCastlingMoveWhenLegal() {
+    let board = Board(position: Position(fen: "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")!)
+
+    let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: Square("e1"),
+      to: Square("g1"),
+      on: board
+    )
+
+    XCTAssertEqual(move, "e1g1")
+  }
+
+  func testOutgoingMoveUCIRejectsCastlingWhenBlockedByPiece() {
+    let board = Board(position: Position(fen: "r3k2r/8/8/8/8/8/8/R3KB1R w KQkq - 0 1")!)
+
+    let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: Square("e1"),
+      to: Square("g1"),
+      on: board
+    )
+
+    XCTAssertNil(move)
+  }
+
+  func testOutgoingMoveUCIRejectsCastlingThroughCheck() {
+    let board = Board(position: Position(fen: "5r1k/8/8/8/8/8/8/R3K2R w KQ - 0 1")!)
+
+    let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: Square("e1"),
+      to: Square("g1"),
+      on: board
+    )
+
+    XCTAssertNil(move)
+  }
+
+  func testPositionBuilderAppliesEnPassantCapture() {
+    let result = LichessBoardPositionBuilder.build(
+      initialFEN: "startpos",
+      movesString: "e2e4 a7a6 e4e5 d7d5 e5d6"
+    )
+
+    XCTAssertEqual(result.lastMove, "e5d6")
+    XCTAssertEqual(result.board.position.piece(at: Square("d6"))?.kind, .pawn)
+    XCTAssertEqual(result.board.position.piece(at: Square("d6"))?.color, .white)
+    XCTAssertNil(result.board.position.piece(at: Square("d5")))
+  }
+
+  func testOutgoingMoveUCIRejectsExpiredEnPassantCapture() {
+    let board = Board(position: Position(fen: "4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1")!)
+
+    let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: Square("e5"),
+      to: Square("d6"),
+      on: board
+    )
+
+    XCTAssertNil(move)
+  }
 }

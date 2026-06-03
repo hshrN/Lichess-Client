@@ -67,6 +67,21 @@ struct ConnectionSettingsView: View {
 
       Divider()
 
+      VStack(alignment: .leading, spacing: 10) {
+        Text("Testing")
+          .font(.headline)
+
+        NavigationLink("Bot Match Test", destination: BotMatchTestView(model: model))
+        NavigationLink("Rules Lab", destination: ChessRulesLabView())
+
+        Text("Use bots for live stream and move submission checks. Use Rules Lab for deterministic legality checks like castling, check response, en passant, and promotion.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
+      Divider()
+
       ViewThatFits(in: .horizontal) {
         HStack(alignment: .top, spacing: 16) {
           customizationControls

@@ -9,6 +9,8 @@ final class ChessPreviewGameModel {
   var isBoardFlipped = false
   var lastMove: ChessBoardMoveHighlight?
   var moves: [String] = []
+  private var startingPosition: Position = .standard
+  private var initialSelectedSquare: Square?
 
   var chessBoardState: ChessBoardState {
     ChessBoardState(
@@ -70,14 +72,24 @@ final class ChessPreviewGameModel {
   }
 
   func reset() {
-    board = Board()
-    selectedSquare = nil
+    board = Board(position: startingPosition)
+    selectedSquare = initialSelectedSquare
     lastMove = nil
     moves = []
   }
 
   func flipBoard() {
     isBoardFlipped.toggle()
+  }
+
+  func load(position: Position, selectedSquare: Square? = nil) {
+    startingPosition = position
+    initialSelectedSquare = selectedSquare
+    board = Board(position: position)
+    self.selectedSquare = selectedSquare
+    lastMove = nil
+    moves = []
+    isBoardFlipped = false
   }
 
   private var checkedKingSquare: Square? {
