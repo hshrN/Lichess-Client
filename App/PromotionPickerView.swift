@@ -41,8 +41,7 @@ struct PromotionPickerView: View {
 
   @ViewBuilder
   private func pieceImage(for option: PromotionPieceOption) -> some View {
-    let piece = Piece(kind: option.kind, color: color, square: Square("a1"))
-    if let image = ChessAssetImage.uiImage(theme: pieceTheme, imageName: pieceTheme.imageName(for: piece)) {
+    if let image = ChessAssetImage.uiImage(theme: pieceTheme, imageName: imageName(for: option)) {
       Image(uiImage: image.withRenderingMode(.alwaysOriginal))
         .resizable()
         .renderingMode(.original)
@@ -70,5 +69,21 @@ struct PromotionPickerView: View {
     case (.black, .knight): "♞"
     default: "♕"
     }
+  }
+
+  private func imageName(for option: PromotionPieceOption) -> String {
+    let prefix = color == .white ? "w" : "b"
+    let suffix: String
+    switch option {
+    case .queen:
+      suffix = "Q"
+    case .rook:
+      suffix = "R"
+    case .bishop:
+      suffix = "B"
+    case .knight:
+      suffix = "N"
+    }
+    return "\(prefix)\(suffix)"
   }
 }

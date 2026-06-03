@@ -111,10 +111,7 @@ final class ChessPreviewGameModel {
       return
     }
 
-    guard let appliedMove = board.completePromotion(of: pendingPromotion.move, to: option.kind) else {
-      self.pendingPromotion = nil
-      return
-    }
+    let appliedMove = board.completePromotion(of: pendingPromotion.move, to: option.kind)
 
     self.pendingPromotion = nil
     selectedSquare = nil
@@ -149,8 +146,8 @@ final class ChessPreviewGameModel {
     }
 
     if case .promotion = board.state {
-      if AppPreferences.autoPromoteToQueen,
-         let appliedMove = board.completePromotion(of: initialMove, to: .queen) {
+      if AppPreferences.autoPromoteToQueen {
+        let appliedMove = board.completePromotion(of: initialMove, to: .queen)
         selectedSquare = nil
         lastMove = ChessBoardMoveHighlight(start: start, end: end)
         moves.append("\(start.notation)\(end.notation)q")
