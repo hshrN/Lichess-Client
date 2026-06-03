@@ -376,6 +376,7 @@ final class LichessClientModel {
     isInGame = true
     hasLoadedGameState = true
     activeGame.status = "started"
+    isBoardFlipped = false
   }
 
   func returnHome() {
@@ -391,6 +392,8 @@ final class LichessClientModel {
     opponentPresenceMessage = nil
     canClaimVictory = false
     canClaimDraw = false
+    pendingSubmittedMove = nil
+    isBoardFlipped = false
   }
 
   func flipBoard() {
@@ -705,6 +708,7 @@ final class LichessClientModel {
         moves: event.game.lastMove.map { $0.isEmpty ? [] : [$0] } ?? [],
         chat: []
       )
+      isBoardFlipped = event.game.color.lowercased() == "black"
       isInGame = true
       hasLoadedGameState = false
       activeInitialFEN = nil

@@ -7,20 +7,22 @@ struct ContentView: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 18) {
-          if model.isInGame {
-            LiveBoardView(model: model)
-          } else {
-            RapidHomeView(model: model) {
-              showingSettings = true
+      Group {
+        if model.isInGame {
+          LiveBoardView(model: model)
+        } else {
+          ScrollView {
+            VStack(spacing: 18) {
+              RapidHomeView(model: model) {
+                showingSettings = true
+              }
             }
+            .frame(maxWidth: .infinity)
+            .padding()
           }
+          .background(Color(.systemGroupedBackground))
         }
-        .frame(maxWidth: .infinity)
-        .padding()
       }
-      .background(Color(.systemGroupedBackground))
       .navigationTitle("Rapid")
       .toolbar {
         if model.isInGame {

@@ -4,15 +4,21 @@ struct LiveBoardView: View {
   @Bindable var model: LichessClientModel
 
   var body: some View {
-    VStack(spacing: 12) {
-      RapidHeaderView(model: model)
-      GameClockRow(game: model.activeGame)
-      ChessBoardPanel(model: model)
-      MoveControlsView(model: model)
-      OpponentPresenceView(model: model)
-      ChatComposerView(model: model)
-      EventFeedView(events: model.events)
+    ScrollView {
+      VStack(spacing: 16) {
+        RapidHeaderView(model: model)
+        GameClockRow(game: model.activeGame)
+        ChessBoardStage(model: model)
+        MoveControlsView(model: model)
+        OpponentPresenceView(model: model)
+        ChatComposerView(model: model)
+        EventFeedView(events: model.events)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 10)
     }
+    .background(Color(.systemGroupedBackground))
   }
 }
 
@@ -21,9 +27,16 @@ private struct GameClockRow: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      ClockCard(name: "White", time: game.whiteTime, isActive: game.isMyTurn && game.myColor == "White")
-      ClockCard(name: "Black", time: game.blackTime, isActive: !game.isMyTurn && game.myColor == "White")
+      ClockCard(name: "White", time: game.whiteTime, isActive: activeSide == "white")
+      ClockCard(name: "Black", time: game.blackTime, isActive: activeSide == "black")
     }
+  }
+
+  private var activeSide: String {
+    if game.isMyTurn {
+      return game.myColor.lowercased()
+    }
+    return game.myColor.lowercased() == "white" ? "black" : "white"
   }
 }
 
@@ -46,24 +59,61 @@ private struct ClockCard: View {
   }
 }
 
-private struct ChessBoardPanel: View {
+private struct ChessBoardStage: View {
   @Bindable var model: LichessClientModel
 
   var body: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: 12) {
       ChessBoardView(
         state: model.chessBoardState,
         isInteractionEnabled: model.hasLoadedGameState && model.activeGame.isMyTurn && model.activeGame.status == "started" && !model.isSubmittingMove,
         syncingMessage: model.hasLoadedGameState ? nil : "Syncing board…",
         onSelectSquare: model.selectBoardSquare
       )
+      .frame(maxWidth: .infinity)
 
-      Button("Flip Board", systemImage: "arrow.triangle.2.circlepath") {
-        model.flipBoard()
+      HStack(spacing: 10) {
+        boardMeta(title: "You", value: model.activeGame.myColor)
+        boardMeta(title: "Status", value: model.activeGame.status.capitalized)
+        boardMeta(title: "Speed", value: model.activeGame.speed)
       }
-      .buttonStyle(.bordered)
-      .frame(maxWidth: .infinity, alignment: .trailing)
+
+      HStack(spacing: 10) {
+        Button("Flip Board", systemImage: "arrow.triangle.2.circlepath") {
+          model.flipBoard()
+        }
+        .buttonStyle(.bordered)
+
+        Spacer()
+
+        if model.isSubmittingMove {
+          Label("Submitting…", systemImage: "hourglass")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+        } else {
+          Label(model.activeGame.isMyTurn ? "Your move" : "Waiting", systemImage: model.activeGame.isMyTurn ? "hand.point.up.left.fill" : "clock")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+        }
+      }
     }
+    .padding(12)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
+  }
+
+  private func boardMeta(title: String, value: String) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      Text(value)
+        .font(.subheadline.weight(.semibold))
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(12)
+    .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
   }
 }
 
@@ -71,45 +121,56 @@ private struct MoveControlsView: View {
   @Bindable var model: LichessClientModel
 
   var body: some View {
-    HStack(spacing: 10) {
-      Button("Abort", systemImage: "stop.circle") {
-        model.abort()
-      }
-      .buttonStyle(.bordered)
-      .disabled(model.isSubmittingGameAction)
+    VStack(spacing: 10) {
+      HStack(spacing: 10) {
+        actionButton("Draw", systemImage: "equal.circle") {
+          model.offerDraw()
+        }
+        .buttonStyle(.bordered)
 
-      Button("Draw", systemImage: "equal.circle") {
-        model.offerDraw()
+        actionButton("Abort", systemImage: "stop.circle") {
+          model.abort()
+        }
+        .buttonStyle(.bordered)
       }
-      .buttonStyle(.bordered)
-      .disabled(model.isSubmittingGameAction)
 
-      Button("Resign", systemImage: "flag") {
-        model.resign()
-      }
-      .buttonStyle(.borderedProminent)
-      .disabled(model.isSubmittingGameAction)
+      HStack(spacing: 10) {
+        actionButton("Resign", systemImage: "flag") {
+          model.resign()
+        }
+        .buttonStyle(.borderedProminent)
 
-      Menu {
-        Button("Takeback", systemImage: "arrow.uturn.backward.circle") {
-          model.requestTakeback()
+        Menu {
+          Button("Takeback", systemImage: "arrow.uturn.backward.circle") {
+            model.requestTakeback()
+          }
+          Button("Claim Victory", systemImage: "crown") {
+            model.claimVictory()
+          }
+          Button("Claim Draw", systemImage: "equal.square") {
+            model.claimDraw()
+          }
+          Button("Berserk", systemImage: "bolt") {
+            model.berserk()
+          }
+        } label: {
+          Label("More", systemImage: "ellipsis")
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
         }
-        Button("Claim Victory", systemImage: "crown") {
-          model.claimVictory()
-        }
-        Button("Claim Draw", systemImage: "equal.square") {
-          model.claimDraw()
-        }
-        Button("Berserk", systemImage: "bolt") {
-          model.berserk()
-        }
-      } label: {
-        Label("More", systemImage: "ellipsis")
+        .buttonStyle(.bordered)
+        .disabled(model.isSubmittingGameAction)
       }
-      .buttonStyle(.bordered)
-      .disabled(model.isSubmittingGameAction)
     }
-    .frame(maxWidth: .infinity)
+  }
+
+  private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    Button(title, systemImage: systemImage, action: action)
+      .font(.subheadline.weight(.semibold))
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 14)
+      .disabled(model.isSubmittingGameAction)
   }
 }
 
