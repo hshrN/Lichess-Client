@@ -18,9 +18,9 @@ final class LichessClientModel {
   var isSearching = false
   var isAuthenticating = false
   var authError: String?
-  var challenges = LichessChallenge.samples
-  var following = LichessFollowedPlayer.samples
-  var onlineBots = LichessBotPlayer.samples
+  var challenges: [LichessChallenge] = []
+  var following: [LichessFollowedPlayer] = []
+  var onlineBots: [LichessBotPlayer] = []
   var playerSearchText = ""
   var selectedSeekPreset = SeekPreset.defaults[0]
   var events = LichessEvent.samples
@@ -672,18 +672,6 @@ final class LichessClientModel {
     switch envelope.type {
     case "gameStart":
       guard let event = try? JSONDecoder().decode(GameStartEvent.self, from: data) else { return }
-      let startedOpponent = event.game.opponent.username ?? event.game.opponent.id
-      if pendingDirectChallengeKind == .bot, pendingDirectChallengeOpponent == startedOpponent {
-        isSendingDirectChallenge = false
-        pendingDirectChallengeOpponent = nil
-        pendingDirectChallengeLabel = nil
-        pendingDirectChallengeKind = nil
-        events.insert(
-          LichessEvent(title: "Bot challenge ignored", detail: startedOpponent ?? "Bot", systemImage: "cpu"),
-          at: 0
-        )
-        return
-      }
       isSearching = false
       isSendingDirectChallenge = false
       pendingDirectChallengeOpponent = nil
@@ -764,6 +752,9 @@ final class LichessClientModel {
       )
     case "gameFinish":
       guard let event = try? JSONDecoder().decode(GameFinishEvent.self, from: data) else { return }
+      if activeGame.id == event.game.gameId {
+        activeGame.status = "finished"
+      }
       events.insert(
         LichessEvent(title: "Game finished", detail: event.game.gameId, systemImage: "flag.checkered"),
         at: 0
@@ -933,9 +924,16 @@ final class LichessClientModel {
     case "gameState":
       guard let event = try? JSONDecoder().decode(GameStateEvent.self, from: data) else { return }
       let meIsWhite = activeGame.myColor.lowercased() == "white"
+      let previousStatus = activeGame.status
       activeGame.status = event.status
       updateBoardState(initialFEN: activeInitialFEN, movesString: event.moves)
       updateClockState(state: event, meIsWhite: meIsWhite, fallbackInitial: 0)
+      if previousStatus != event.status, event.status != "started" {
+        events.insert(
+          LichessEvent(title: "Game status", detail: event.status.capitalized, systemImage: "info.circle"),
+          at: 0
+        )
+      }
     case "chatLine":
       guard let line = try? JSONDecoder().decode(ChatLineEvent.self, from: data) else { return }
       let room = line.room == "spectator" ? ChatRoom.spectator : .player

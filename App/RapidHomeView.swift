@@ -35,9 +35,9 @@ struct RapidHomeView: View {
   private var header: some View {
     HStack(spacing: 12) {
       VStack(alignment: .leading, spacing: 4) {
-        Text("Rapid")
-          .font(.largeTitle.bold())
         Text(model.isConfigured ? model.accountLabel : "Sign in to play on Lichess")
+          .font(.title3.weight(.semibold))
+        Text("Rapid pairing")
           .font(.subheadline)
           .foregroundStyle(.secondary)
       }

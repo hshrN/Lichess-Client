@@ -7,6 +7,9 @@ struct LiveBoardView: View {
     ScrollView {
       VStack(spacing: 14) {
         gameHeader
+        if model.activeGame.status != "started" {
+          statusBanner
+        }
         ClockStrip(game: model.activeGame, side: .opponent)
         ChessBoardStage(model: model)
         ClockStrip(game: model.activeGame, side: .player)
@@ -25,7 +28,7 @@ struct LiveBoardView: View {
   private var gameHeader: some View {
     HStack(spacing: 12) {
       VStack(alignment: .leading, spacing: 4) {
-        Text(model.activeGame.isMyTurn ? "Your move" : "Waiting")
+        Text(headerTitle)
           .font(.title2.bold())
         Text("\(model.activeGame.opponent) • \(model.activeGame.speed)")
           .font(.subheadline)
@@ -40,6 +43,25 @@ struct LiveBoardView: View {
         .foregroundStyle(.secondary)
         .labelStyle(.titleAndIcon)
     }
+  }
+
+  private var statusBanner: some View {
+    HStack(spacing: 10) {
+      Image(systemName: "info.circle")
+        .foregroundStyle(.tint)
+      Text("Status: \(model.activeGame.status.capitalized)")
+        .font(.subheadline.weight(.semibold))
+      Spacer()
+    }
+    .padding(12)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 14))
+  }
+
+  private var headerTitle: String {
+    if model.activeGame.status != "started" {
+      return model.activeGame.status.capitalized
+    }
+    return model.activeGame.isMyTurn ? "Your move" : "Waiting"
   }
 
   private var gameActions: some View {

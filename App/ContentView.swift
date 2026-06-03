@@ -64,6 +64,11 @@ struct ContentView: View {
             }
         }
       }
+      .onChange(of: model.isInGame) {
+        if model.isInGame {
+          showingSettings = false
+        }
+      }
       .preferredColorScheme(preferredColorScheme)
     }
   }
