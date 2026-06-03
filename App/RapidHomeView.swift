@@ -2,107 +2,73 @@ import SwiftUI
 
 struct RapidHomeView: View {
   @Bindable var model: LichessClientModel
+  @State private var previewGame = ChessPreviewGameModel()
   var showSettings: () -> Void
 
-  var body: some View {
-    VStack(spacing: 20) {
-      HomeDashboardView(model: model, showSettings: showSettings)
-      PlayControlPanel(model: model, showSettings: showSettings)
-      FollowingChallengeView(model: model, showSettings: showSettings)
-      ChallengeInboxPanel(model: model)
-      EventFeedCompactView(events: model.events)
-    }
+  private var pendingChallenge: LichessChallenge? {
+    model.challenges.first { $0.status == .pending }
   }
-}
-
-private struct HomeDashboardView: View {
-  var model: LichessClientModel
-  var showSettings: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      HStack(alignment: .top) {
-        VStack(alignment: .leading, spacing: 6) {
-          Text("Lichess Rapid")
-            .font(.largeTitle.bold())
-          Text("Play, challenge friends, and manage live games from one native iOS dashboard.")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-      }
+    VStack(spacing: 22) {
+      header
 
-      HStack(spacing: 10) {
-        DashboardMetric(title: "Status", value: model.streamState.title, systemImage: "antenna.radiowaves.left.and.right")
-        DashboardMetric(title: "Following", value: "\(model.following.count)", systemImage: "person.2")
-        DashboardMetric(title: "Inbox", value: "\(model.challenges.filter { $0.status == .pending }.count)", systemImage: "tray")
+      ChessBoardView(
+        state: previewGame.chessBoardState,
+        isInteractionEnabled: true,
+        syncingMessage: nil,
+        onSelectSquare: { _ in }
+      )
+        .frame(maxWidth: 360)
+        .padding(.horizontal, 10)
+
+      playPanel
+
+      if let pendingChallenge {
+        challengeRow(pendingChallenge)
       }
     }
-    .padding(18)
-    .background(
-      LinearGradient(
-        colors: [Color.accentColor.opacity(0.18), Color(.secondarySystemGroupedBackground)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      ),
-      in: .rect(cornerRadius: 20)
-    )
+    .frame(maxWidth: 430)
+    .frame(maxWidth: .infinity)
   }
-}
 
-private struct DashboardMetric: View {
-  var title: String
-  var value: String
-  var systemImage: String
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Image(systemName: systemImage)
-        .foregroundStyle(.tint)
-      Text(value)
-        .font(.headline)
-      Text(title)
-        .font(.caption)
-        .foregroundStyle(.secondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(12)
-    .background(Color(.systemBackground).opacity(0.72), in: .rect(cornerRadius: 14))
-  }
-}
-
-private struct PlayControlPanel: View {
-  @Bindable var model: LichessClientModel
-  var showSettings: () -> Void
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      HStack {
-        Label("Play", systemImage: "bolt.fill")
-          .font(.headline)
-        Spacer()
-        Text(model.selectedSeekPreset.rated ? "Rated" : "Casual")
-          .font(.caption.weight(.semibold))
+  private var header: some View {
+    HStack(spacing: 12) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Rapid")
+          .font(.largeTitle.bold())
+        Text(model.isConfigured ? model.accountLabel : "Sign in to play on Lichess")
+          .font(.subheadline)
           .foregroundStyle(.secondary)
       }
 
-      HStack(spacing: 8) {
+      Spacer()
+
+      Button("Account", systemImage: model.isConfigured ? "person.crop.circle" : "person.crop.circle.badge.plus") {
+        showSettings()
+      }
+      .labelStyle(.iconOnly)
+      .buttonStyle(.bordered)
+      .accessibilityLabel(model.isConfigured ? "Account" : "Sign in")
+    }
+  }
+
+  private var playPanel: some View {
+    VStack(spacing: 14) {
+      Picker("Time Control", selection: $model.selectedSeekPreset) {
         ForEach(SeekPreset.defaults) { preset in
-          Button {
-            model.selectSeekPreset(preset)
-          } label: {
-            Text(preset.title.replacingOccurrences(of: "Rapid ", with: ""))
-              .font(.subheadline.weight(.semibold))
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, 10)
-              .background(
-                model.selectedSeekPreset.id == preset.id ? Color.accentColor.opacity(0.18) : Color(.tertiarySystemGroupedBackground),
-                in: .rect(cornerRadius: 10)
-              )
-          }
-          .buttonStyle(.plain)
+          Text(shortTitle(for: preset)).tag(preset)
         }
       }
+      .pickerStyle(.segmented)
+
+      HStack {
+        Label(model.selectedSeekPreset.rated ? "Rated" : "Casual", systemImage: model.selectedSeekPreset.rated ? "checkmark.seal" : "leaf")
+        Spacer()
+        Label("Random color", systemImage: "circle.lefthalf.filled")
+      }
+      .font(.caption.weight(.semibold))
+      .foregroundStyle(.secondary)
 
       Button {
         if model.isConfigured {
@@ -113,104 +79,77 @@ private struct PlayControlPanel: View {
           showSettings()
         }
       } label: {
-        Label(model.isSearching ? "Searching…" : "Play \(model.selectedSeekPreset.title)", systemImage: model.isSearching ? "hourglass" : "play.fill")
-          .font(.title3.bold())
+        Label(model.isSearching ? "Searching…" : "Play \(shortTitle(for: model.selectedSeekPreset))", systemImage: model.isSearching ? "hourglass" : "play.fill")
+          .font(.headline)
           .frame(maxWidth: .infinity)
-          .padding(.vertical, 16)
+          .padding(.vertical, 12)
       }
       .buttonStyle(.borderedProminent)
       .controlSize(.large)
       .disabled(model.isSendingDirectChallenge)
 
       if model.isSearching {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
           ProgressView()
-          Text("Searching on Lichess for \(model.selectedSeekPreset.title).")
+          Text(model.selectedSeekPreset.title)
             .font(.subheadline)
             .foregroundStyle(.secondary)
+
           Spacer()
+
           Button("Cancel") {
             model.cancelSeek()
           }
           .font(.subheadline.weight(.semibold))
         }
       } else if let pendingLabel = model.pendingDirectChallengeLabel {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
           ProgressView()
-          Text("Waiting for \(pendingLabel) to start.")
+          Text("Waiting for \(pendingLabel)")
             .font(.subheadline)
             .foregroundStyle(.secondary)
+            .lineLimit(1)
           Spacer()
         }
       }
     }
     .padding(16)
-    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
   }
-}
 
-private struct ChallengeInboxPanel: View {
-  var model: LichessClientModel
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Label("Challenge Inbox", systemImage: "tray")
-        .font(.headline)
-
-      ForEach(model.challenges.prefix(3)) { challenge in
-        HStack(spacing: 12) {
-          Image(systemName: challenge.status == .pending ? "clock" : "checkmark.circle")
-            .foregroundStyle(.tint)
-            .frame(width: 28)
-
-          VStack(alignment: .leading, spacing: 2) {
-            Text(challenge.opponent)
-              .font(.subheadline.weight(.semibold))
-            Text("\(challenge.control) • \(challenge.rated ? "Rated" : "Casual")")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-
-          Spacer()
-
-          Text(challenge.status.title)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+  private func challengeRow(_ challenge: LichessChallenge) -> some View {
+    HStack(spacing: 12) {
+      VStack(alignment: .leading, spacing: 3) {
+        Text(challenge.opponent)
+          .font(.subheadline.weight(.semibold))
+        Text("\(challenge.control) • \(challenge.rated ? "Rated" : "Casual")")
+          .font(.caption)
+          .foregroundStyle(.secondary)
       }
+
+      Spacer()
+
+      Button("Decline", systemImage: "xmark") {
+        model.decline(challenge)
+      }
+      .labelStyle(.iconOnly)
+      .buttonStyle(.bordered)
+      .accessibilityLabel("Decline challenge")
+      .disabled(model.isSubmittingChallengeAction)
+
+      Button("Accept", systemImage: "checkmark") {
+        model.accept(challenge)
+      }
+      .labelStyle(.iconOnly)
+      .buttonStyle(.borderedProminent)
+      .accessibilityLabel("Accept challenge")
+      .disabled(model.isSubmittingChallengeAction)
     }
-    .padding(16)
-    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
+    .padding(14)
+    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
   }
-}
 
-private struct EventFeedCompactView: View {
-  var events: [LichessEvent]
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      Label("Activity", systemImage: "waveform.path.ecg")
-        .font(.headline)
-
-      ForEach(events.prefix(3)) { event in
-        Label {
-          VStack(alignment: .leading, spacing: 2) {
-            Text(event.title)
-              .font(.subheadline.weight(.semibold))
-            Text(event.detail)
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-        } icon: {
-          Image(systemName: event.systemImage)
-            .foregroundStyle(.tint)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-    }
-    .padding(16)
-    .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 18))
+  private func shortTitle(for preset: SeekPreset) -> String {
+    preset.title.replacingOccurrences(of: "Rapid ", with: "")
   }
 }

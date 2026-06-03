@@ -244,7 +244,7 @@ struct ChatLine: Identifiable {
   var room: ChatRoom
 }
 
-struct SeekPreset: Identifiable {
+struct SeekPreset: Hashable, Identifiable {
   var id: String { title }
   var title: String
   var time: Int?
