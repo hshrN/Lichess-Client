@@ -23,6 +23,16 @@ struct LiveBoardView: View {
       .padding(.vertical, 10)
     }
     .background(Color(.systemGroupedBackground))
+    .sheet(isPresented: promotionPickerIsPresented) {
+      if let color = model.pendingPromotionColor {
+        PromotionPickerView(
+          color: color,
+          onSelect: model.choosePromotion,
+          onCancel: model.cancelPromotion
+        )
+        .presentationDetents([.height(220)])
+      }
+    }
   }
 
   private var gameHeader: some View {
@@ -62,6 +72,17 @@ struct LiveBoardView: View {
       return model.activeGame.status.capitalized
     }
     return model.activeGame.isMyTurn ? "Your move" : "Waiting"
+  }
+
+  private var promotionPickerIsPresented: Binding<Bool> {
+    Binding(
+      get: { model.pendingPromotion != nil },
+      set: { isPresented in
+        if !isPresented {
+          model.cancelPromotion()
+        }
+      }
+    )
   }
 
   private var gameActions: some View {

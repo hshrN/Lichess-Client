@@ -5,6 +5,7 @@ struct ConnectionSettingsView: View {
   @AppStorage(AppPreferences.pieceThemeKey) private var pieceThemeRawValue = PieceTheme.rhosgfx.rawValue
   @AppStorage(AppPreferences.boardStyleKey) private var boardStyleRawValue = BoardStyle.walnut.rawValue
   @AppStorage(AppPreferences.soundEnabledKey) private var soundEnabled = AppPreferences.soundEnabled
+  @AppStorage(AppPreferences.autoPromoteToQueenKey) private var autoPromoteToQueen = AppPreferences.autoPromoteToQueen
   @Bindable var model: LichessClientModel
 
   var body: some View {
@@ -127,6 +128,7 @@ struct ConnectionSettingsView: View {
       .pickerStyle(.segmented)
 
       Toggle("Sounds", isOn: $soundEnabled)
+      Toggle("Auto-promote to queen", isOn: $autoPromoteToQueen)
     }
     .frame(minWidth: 230, maxWidth: .infinity, alignment: .leading)
   }

@@ -18,4 +18,26 @@ final class ChessPreviewGameModelTests: XCTestCase {
     XCTAssertEqual(model.board.position.piece(at: Square("e5"))?.kind, .pawn)
     XCTAssertNil(model.selectedSquare)
   }
+
+  func testPreviewGameWaitsForPromotionChoiceWhenAutoPromoteDisabled() {
+    UserDefaults.standard.set(false, forKey: AppPreferences.autoPromoteToQueenKey)
+    defer {
+      UserDefaults.standard.removeObject(forKey: AppPreferences.autoPromoteToQueenKey)
+    }
+
+    let model = ChessPreviewGameModel()
+    model.load(position: Position(fen: "4k3/P7/8/8/8/8/8/4K3 w - - 0 1")!)
+
+    model.selectBoardSquare(Square("a7"))
+    model.selectBoardSquare(Square("a8"))
+
+    XCTAssertNotNil(model.pendingPromotion)
+    XCTAssertEqual(model.moves, [])
+
+    model.choosePromotion(.knight)
+
+    XCTAssertNil(model.pendingPromotion)
+    XCTAssertEqual(model.moves, ["a7a8n"])
+    XCTAssertEqual(model.board.position.piece(at: Square("a8"))?.kind, .knight)
+  }
 }

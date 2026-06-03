@@ -9,6 +9,12 @@ final class LichessClientModel {
     case bot
   }
 
+  struct PendingPromotion {
+    var start: Square
+    var end: Square
+    var color: Piece.Color
+  }
+
   var accessToken = ""
   var accountUsername = ""
   var streamState = StreamConnectionState.disconnected
@@ -40,6 +46,7 @@ final class LichessClientModel {
   var opponentPresenceMessage: String?
   var canClaimVictory = false
   var canClaimDraw = false
+  var pendingPromotion: PendingPromotion?
   private var activeInitialFEN: String?
   private var pendingSubmittedMove: String?
   private var eventStreamTask: Task<Void, Never>?
@@ -86,6 +93,10 @@ final class LichessClientModel {
     case .active, .draw, .promotion:
       nil
     }
+  }
+
+  var pendingPromotionColor: Piece.Color? {
+    pendingPromotion?.color
   }
 
   func signIn() async {
@@ -394,6 +405,7 @@ final class LichessClientModel {
     canClaimDraw = false
     pendingSubmittedMove = nil
     isBoardFlipped = false
+    pendingPromotion = nil
   }
 
   func flipBoard() {
@@ -464,7 +476,22 @@ final class LichessClientModel {
 
     let start = Square(selectedSquare.uci)
     let end = Square(square.uci)
-    guard let move = LichessBoardPositionBuilder.outgoingMoveUCI(from: start, to: end, on: board) else {
+    if LichessBoardPositionBuilder.requiresPromotion(from: start, to: end, on: board),
+       !AppPreferences.autoPromoteToQueen {
+      pendingPromotion = PendingPromotion(
+        start: start,
+        end: end,
+        color: activeGame.myColor.lowercased() == "white" ? .white : .black
+      )
+      return
+    }
+
+    guard let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: start,
+      to: end,
+      on: board,
+      promotion: .queen
+    ) else {
       events.insert(
         LichessEvent(title: "Illegal move", detail: "\(selectedSquare.uci)\(square.uci)", systemImage: "exclamationmark.triangle"),
         at: 0
@@ -472,6 +499,37 @@ final class LichessClientModel {
       return
     }
 
+    submitMove(move)
+  }
+
+  func choosePromotion(_ option: PromotionPieceOption) {
+    guard let pendingPromotion else {
+      return
+    }
+
+    guard let move = LichessBoardPositionBuilder.outgoingMoveUCI(
+      from: pendingPromotion.start,
+      to: pendingPromotion.end,
+      on: board,
+      promotion: option.kind
+    ) else {
+      self.pendingPromotion = nil
+      events.insert(
+        LichessEvent(title: "Illegal move", detail: "\(pendingPromotion.start.notation)\(pendingPromotion.end.notation)", systemImage: "exclamationmark.triangle"),
+        at: 0
+      )
+      return
+    }
+
+    self.pendingPromotion = nil
+    submitMove(move)
+  }
+
+  func cancelPromotion() {
+    pendingPromotion = nil
+  }
+
+  private func submitMove(_ move: String) {
     guard !activeGame.id.isEmpty else {
       events.insert(
         LichessEvent(title: "Move blocked", detail: "No live game is connected.", systemImage: "exclamationmark.triangle"),
@@ -480,6 +538,7 @@ final class LichessClientModel {
       return
     }
 
+    pendingPromotion = nil
     isSubmittingMove = true
     events.insert(
       LichessEvent(title: "Sending move", detail: move, systemImage: "arrow.up.right.square"),
@@ -703,6 +762,7 @@ final class LichessClientModel {
       opponentPresenceMessage = nil
       canClaimVictory = false
       canClaimDraw = false
+      pendingPromotion = nil
       startGameStream(gameID: event.game.gameId)
       events.insert(
         LichessEvent(title: "Game started", detail: "\((event.game.opponent.username ?? event.game.opponent.id) ?? "Opponent") • \(event.game.speed.capitalized)", systemImage: "play.circle"),
@@ -928,6 +988,9 @@ final class LichessClientModel {
       activeGame.status = event.status
       updateBoardState(initialFEN: activeInitialFEN, movesString: event.moves)
       updateClockState(state: event, meIsWhite: meIsWhite, fallbackInitial: 0)
+      if event.status != "started" {
+        pendingPromotion = nil
+      }
       if previousStatus != event.status, event.status != "started" {
         events.insert(
           LichessEvent(title: "Game status", detail: event.status.capitalized, systemImage: "info.circle"),
@@ -972,6 +1035,7 @@ final class LichessClientModel {
     activeGame.moves = result.moves
     activeGame.lastMove = result.lastMove
     activeGame.isMyTurn = board.position.sideToMove == (activeGame.myColor.lowercased() == "white" ? .white : .black)
+    pendingPromotion = nil
     if pendingSubmittedMove == result.lastMove {
       pendingSubmittedMove = nil
     }

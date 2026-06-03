@@ -54,6 +54,16 @@ struct ChessRulesLabView: View {
     .onChange(of: selectedScenario) {
       loadSelectedScenario()
     }
+    .sheet(isPresented: promotionPickerIsPresented) {
+      if let color = game.pendingPromotionColor {
+        PromotionPickerView(
+          color: color,
+          onSelect: game.choosePromotion,
+          onCancel: game.cancelPromotion
+        )
+        .presentationDetents([.height(220)])
+      }
+    }
   }
 
   private func stat(title: String, value: String) -> some View {
@@ -72,5 +82,16 @@ struct ChessRulesLabView: View {
 
   private func loadSelectedScenario() {
     game.load(position: selectedScenario.position, selectedSquare: selectedScenario.focusSquare)
+  }
+
+  private var promotionPickerIsPresented: Binding<Bool> {
+    Binding(
+      get: { game.pendingPromotion != nil },
+      set: { isPresented in
+        if !isPresented {
+          game.cancelPromotion()
+        }
+      }
+    )
   }
 }

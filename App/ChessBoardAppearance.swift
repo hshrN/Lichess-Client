@@ -122,6 +122,7 @@ enum AppPreferences {
   static let boardStyleKey = "boardStyle"
   static let soundThemeKey = "soundTheme"
   static let soundEnabledKey = "soundEnabled"
+  static let autoPromoteToQueenKey = "autoPromoteToQueen"
 
   static var soundEnabled: Bool {
     let defaults = UserDefaults.standard
@@ -129,5 +130,13 @@ enum AppPreferences {
       return true
     }
     return defaults.bool(forKey: soundEnabledKey)
+  }
+
+  static var autoPromoteToQueen: Bool {
+    let defaults = UserDefaults.standard
+    if defaults.object(forKey: autoPromoteToQueenKey) == nil {
+      return true
+    }
+    return defaults.bool(forKey: autoPromoteToQueenKey)
   }
 }

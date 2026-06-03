@@ -4,11 +4,19 @@ import Foundation
 @Observable
 @MainActor
 final class ChessPreviewGameModel {
+  struct PendingPromotion {
+    var move: Move
+    var start: Square
+    var end: Square
+    var color: Piece.Color
+  }
+
   var board = Board()
   var selectedSquare: Square?
   var isBoardFlipped = false
   var lastMove: ChessBoardMoveHighlight?
   var moves: [String] = []
+  var pendingPromotion: PendingPromotion?
   private var startingPosition: Position = .standard
   private var initialSelectedSquare: Square?
 
@@ -50,6 +58,10 @@ final class ChessPreviewGameModel {
     "\(moves.count) move\(moves.count == 1 ? "" : "s")"
   }
 
+  var pendingPromotionColor: Piece.Color? {
+    pendingPromotion?.color
+  }
+
   func selectBoardSquare(_ square: Square) {
     if selectedSquare == square {
       selectedSquare = nil
@@ -76,6 +88,7 @@ final class ChessPreviewGameModel {
     selectedSquare = initialSelectedSquare
     lastMove = nil
     moves = []
+    pendingPromotion = nil
   }
 
   func flipBoard() {
@@ -90,6 +103,28 @@ final class ChessPreviewGameModel {
     lastMove = nil
     moves = []
     isBoardFlipped = false
+    pendingPromotion = nil
+  }
+
+  func choosePromotion(_ option: PromotionPieceOption) {
+    guard let pendingPromotion else {
+      return
+    }
+
+    guard let appliedMove = board.completePromotion(of: pendingPromotion.move, to: option.kind) else {
+      self.pendingPromotion = nil
+      return
+    }
+
+    self.pendingPromotion = nil
+    selectedSquare = nil
+    lastMove = ChessBoardMoveHighlight(start: pendingPromotion.start, end: pendingPromotion.end)
+    moves.append("\(pendingPromotion.start.notation)\(pendingPromotion.end.notation)\(promotionCode(for: option.kind))")
+    ChessSoundPlayer.shared.play(for: appliedMove)
+  }
+
+  func cancelPromotion() {
+    reset()
   }
 
   private var checkedKingSquare: Square? {
@@ -109,21 +144,42 @@ final class ChessPreviewGameModel {
   }
 
   private func applyMove(from start: Square, to end: Square) {
-    let initialMove = board.move(pieceAt: start, to: end)
-    var appliedMove = initialMove
-
-    if case .promotion = board.state,
-       let initialMove {
-      appliedMove = board.completePromotion(of: initialMove, to: .queen)
+    guard let initialMove = board.move(pieceAt: start, to: end) else {
+      return
     }
 
-    guard let appliedMove else {
+    if case .promotion = board.state {
+      if AppPreferences.autoPromoteToQueen,
+         let appliedMove = board.completePromotion(of: initialMove, to: .queen) {
+        selectedSquare = nil
+        lastMove = ChessBoardMoveHighlight(start: start, end: end)
+        moves.append("\(start.notation)\(end.notation)q")
+        ChessSoundPlayer.shared.play(for: appliedMove)
+      } else {
+        selectedSquare = nil
+        pendingPromotion = PendingPromotion(
+          move: initialMove,
+          start: start,
+          end: end,
+          color: board.position.piece(at: end)?.color ?? .white
+        )
+      }
       return
     }
 
     selectedSquare = nil
     lastMove = ChessBoardMoveHighlight(start: start, end: end)
     moves.append("\(start.notation)\(end.notation)")
-    ChessSoundPlayer.shared.play(for: appliedMove)
+    ChessSoundPlayer.shared.play(for: initialMove)
+  }
+
+  private func promotionCode(for kind: Piece.Kind) -> String {
+    switch kind {
+    case .queen: "q"
+    case .rook: "r"
+    case .bishop: "b"
+    case .knight: "n"
+    default: "q"
+    }
   }
 }
